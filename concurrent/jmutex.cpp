@@ -60,6 +60,11 @@ JCond::JCond(JMutex & m): mutex(m)
     pthread_cond_init(&cond, NULL);
 }
 
+JCond::~JCond()
+{
+    pthread_cond_destroy(&cond);
+}
+
 int JCond::Lock()
 {
     return mutex.Lock();
@@ -120,7 +125,7 @@ int JCountLatch::Done()
 int JCountLatch::Wait()
 {
     cond.Lock();
-    while (!HasDone())
+    while (!HasDoneNonLock())
         cond.Wait();
     return 0;
 }

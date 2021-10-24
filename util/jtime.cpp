@@ -1,6 +1,6 @@
 #include <time.h>
 
-#include "jtime.hpp"
+#include "util/jtime.hpp"
 
 namespace jarvis
 {
