@@ -15,6 +15,34 @@
         }   \
         while (0)
 
+#define DEBUG(fmt, args...)\
+        do  \
+        {   \
+            jarvis::jlog::LogDebug("%s %d %s " fmt, __FILE__, __LINE__, __FUNCTION__, ## args);   \
+        }   \
+        while (0)
+
+#define INFO(fmt, args...)\
+        do  \
+        {   \
+            jarvis::jlog::LogInfo("%s %d %s " fmt, __FILE__, __LINE__, __FUNCTION__, ## args);   \
+        }   \
+        while (0)
+
+#define WARN(fmt, args...)\
+        do  \
+        {   \
+            jarvis::jlog::LogWarn("%s %d %s " fmt, __FILE__, __LINE__, __FUNCTION__, ## args);   \
+        }   \
+        while (0)
+
+#define ERROR(fmt, args...)\
+        do  \
+        {   \
+            jarvis::jlog::LogError("%s %d %s " fmt, __FILE__, __LINE__, __FUNCTION__, ## args);   \
+        }   \
+        while (0)
+
 namespace jarvis
 {
 

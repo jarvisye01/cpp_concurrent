@@ -28,19 +28,21 @@ const char *fmtStrINFO = "%s INFO %s\n";
 const char *fmtStrWARN = "%s WARN %s\n";
 const char *fmtStrERROR = "%s ERROR %s\n";
 
+// logBuf size
+const int logBufSize = 1024 * 10;   // 10Mb buffer
+
 // input buffer
 std::shared_ptr<JBuffer> logBuf;
 JSyncQueue<std::shared_ptr<JBuffer>> logBufQ;
 JMutex bMutex;   // guard logBuf
 std::shared_ptr<JThread> writeThread;
 std::shared_ptr<JThread> timeThread;
-pthread_mutex_t t = PTHREAD_MUTEX_INITIALIZER;
 // =============global val============
 
 int OpenLog()
 {
     glevel = INFO;
-    logBuf.reset(new JBuffer(1024 * 10));
+    logBuf.reset(new JBuffer(logBufSize));
     
     std::string name("back log thread");
     writeThread.reset(new JThread(std::function<void(void)>([] () {
@@ -64,7 +66,7 @@ int OpenLog()
         while (true)
         {
             sleep(1);
-            std::shared_ptr<JBuffer> tmp(new JBuffer(1024 * 10));
+            std::shared_ptr<JBuffer> tmp(new JBuffer(logBufSize));
             {
                 JMutexHelper helper(bMutex);
                 if (logBuf->Avai() > 0)
@@ -95,14 +97,14 @@ int WriteToBuf(const char *buf, int n)
     while (wn < n)
     {
         int tn = logBuf->Write(buf + wn, rest);
-        wn += tn;
-        rest -= tn;
         if (tn < rest)
         {
             // 写满了一个buffer仍然未写完，将这个buf送入队列
             logBufQ.Push(logBuf);
-            logBuf.reset(new JBuffer(1024 * 10));
+            logBuf.reset(new JBuffer(logBufSize));
         }
+        wn += tn;
+        rest -= tn;
     }
     return wn;
 }

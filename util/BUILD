@@ -49,6 +49,43 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "jrand",
+    srcs = [
+        "jrand.cpp",
+    ],
+    hdrs = [
+        "jrand.hpp",
+    ],
+    deps = [
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [
+        "-lpthread",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "jstring",
+    srcs = [
+        "jstring.cpp",
+    ],
+    hdrs = [
+        "jstring.hpp",
+    ],
+    deps = [
+        "//util:jrand",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "jutil_test",
     srcs = [
@@ -60,6 +97,8 @@ cc_binary(
         "//concurrent:jsyncqueue",
         "//util:jbuffer",
         "//util:jlog",
+        "//util:jrand",
+        "//util:jstring",
     ],
     copts = [
         "-std=c++20",

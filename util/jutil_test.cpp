@@ -5,6 +5,8 @@
 #include <functional>
 #include "util/jbuffer.hpp"
 #include "util/jlog.hpp"
+#include "util/jrand.hpp"
+#include "util/jstring.hpp"
 #include "concurrent/jthread.hpp"
 
 using namespace jarvis;
@@ -50,10 +52,31 @@ int TestJLog()
     for (int i = 0; i < 3; i++)
     {
         ptrs[i].reset(new JThread(std::function<void(void)>([t, i, &count] () {
-            time_t t = time(NULL);
-            while (time(NULL) < t + 20)
+            while (true)
             {
-                TRACE("%d %s %d", 3, "hello", i);
+                std::string msg = jstring::GetRandomString(jrand::RandN(200));
+                int level = jrand::RandN(5);
+                switch (level)
+                {
+                case 0:
+                    TRACE("{msg: %s}", msg.c_str());
+                    break;
+                case 1:
+                    DEBUG("{msg: %s}", msg.c_str());
+                    break;
+                case 2:
+                    INFO("{msg: %s}", msg.c_str());
+                    break;
+                case 3:
+                    WARN("{msg: %s}", msg.c_str());
+                    break;
+                case 4:
+                    ERROR("{msg: %s}", msg.c_str());
+                    break;
+                default:
+                    break;
+                }
+                // usleep(jrand::RandN(1000 * 1000));
             }
             count.Done();
         })));
