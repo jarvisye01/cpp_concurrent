@@ -9,7 +9,9 @@ cc_library(
     deps = [
         "//util:jtime",
     ],
-    copts = [],
+    copts = [
+        "-std=c++20",
+    ],
     linkopts = [
         "-lpthread",
     ],
@@ -27,7 +29,29 @@ cc_library(
     deps = [
         "//util:jtime",
     ],
-    copts = [],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [
+        "-lpthread",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "jsyncqueue",
+    srcs = [
+        "jqueue.cpp",
+    ],
+    hdrs = [
+        "jqueue.hpp",
+    ],
+    deps = [
+        "//concurrent:jmutex",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
     linkopts = [
         "-lpthread",
     ],
@@ -43,7 +67,9 @@ cc_binary(
         ":jthread",
         "jmutex",
     ],
-    copts = [],
+    copts = [
+        "-std=c++20",
+    ],
     linkopts = [
         "-lpthread",
     ],

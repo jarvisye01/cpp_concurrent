@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include "jmutex.hpp"
 #include "util/jtime.hpp"
 
@@ -32,7 +35,7 @@ int JMutex::UnLock()
 int JMutex::TryLock(int mc)
 {
     uint64_t timeNow = GetMillTime();
-    while (GetMillTime() - timeNow < mc)
+    while (GetMillTime() - timeNow < static_cast<uint64_t>(mc))
     {
         if (pthread_mutex_trylock(&mutex) == 0)
             return 0;
