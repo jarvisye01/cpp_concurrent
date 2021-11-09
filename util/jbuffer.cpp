@@ -15,7 +15,7 @@ JBuffer::JBuffer(int sz): size(sz), buffer(new char[sz]), rp(0), wp(0), avai(0)
 JBuffer::JBuffer(const JBuffer & b): size(b.size), buffer(new char[b.size]), rp(b.rp), wp(b.wp), avai(0)
 {
     // 优化手段，仅仅拷贝有用的部分
-    strncpy(buffer, b.buffer, size);
+    memcpy(buffer, b.buffer, size);
 }
 
 JBuffer& JBuffer::operator=(const JBuffer & b)
@@ -27,7 +27,7 @@ JBuffer& JBuffer::operator=(const JBuffer & b)
     size = b.size;
     rp = b.rp, wp = b.wp, avai = b.avai;
     buffer = new char[size];
-    strncpy(buffer, b.buffer, size);
+    memcpy(buffer, b.buffer, size);
     return *this;
 }
 
@@ -59,19 +59,19 @@ int JBuffer::Write(const void *buf, int n)
         return wn;  // 提前返回
     if (rp > wp)
     {
-        strncpy(buffer + wp, static_cast<const char*>(buf), wn);
+        memcpy(buffer + wp, static_cast<const char*>(buf), wn);
     }
     else
     {
         int t = size - wp;
         if (t >= wn)
         {
-            strncpy(buffer + wp, static_cast<const char*>(buf), wn);
+            memcpy(buffer + wp, static_cast<const char*>(buf), wn);
         }
         else
         {
-            strncpy(buffer + wp, static_cast<const char*>(buf), t);
-            strncpy(buffer, static_cast<const char*>(buf) + t, wn - t);
+            memcpy(buffer + wp, static_cast<const char*>(buf), t);
+            memcpy(buffer, static_cast<const char*>(buf) + t, wn - t);
         }
     }
     avai += wn;
@@ -86,19 +86,19 @@ int JBuffer::Read(void *buf, int n)
         return rn;  // 提前返回
     if (rp < wp)
     {
-        strncpy(static_cast<char*>(buf), buffer + rp, rn);
+        memcpy(static_cast<char*>(buf), buffer + rp, rn);
     }
     else
     {
         int t = size - rp;
         if (t > rn)
         {
-            strncpy(static_cast<char*>(buf), buffer + rp, rn);
+            memcpy(static_cast<char*>(buf), buffer + rp, rn);
         }
         else
         {
-            strncpy(static_cast<char*>(buf), buffer + rp, size - t);
-            strncpy(static_cast<char*>(buf) + (size - t), buffer, rn - t);
+            memcpy(static_cast<char*>(buf), buffer + rp, size - t);
+            memcpy(static_cast<char*>(buf) + (size - t), buffer, rn - t);
         }
     }
     avai -= rn;

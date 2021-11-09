@@ -14,7 +14,11 @@ namespace jarvis
 const int JNET_ERR = -1;
 const int JNET_SUCC = 0;
 
-int Resolve(char *host, char *service, struct addrinfo *hint, sockaddr_in *addr);
+int Resolve(const char *host, const char *service, sockaddr_in *addr);
+
+int SetSocketReuse(int fd);
+
+int SetNonBlock(int fd);
 
 }  // namespace jarvis
 
