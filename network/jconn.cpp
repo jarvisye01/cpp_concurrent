@@ -258,7 +258,7 @@ JTcpConn::CHECKRET JTcpConn::Check()
             return ERR;
         }
     }
-    return ERR;
+    return GOON;
 }
 
 }; // namespace jarvis
