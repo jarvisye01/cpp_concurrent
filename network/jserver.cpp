@@ -153,7 +153,7 @@ void JTcpServer::SetEventCallBack(JEventLoop::EventCallBack c)
     ec = c;
 }
 
-void JTcpServer::SetTimeCallBack(JEventLoop::TimeCallBack c, int interval)
+void JTcpServer::SetTimeCallBack(JEventLoop::TimeCallBack c, uint64_t interval)
 {
     tc = c;
     tcInterval = interval;

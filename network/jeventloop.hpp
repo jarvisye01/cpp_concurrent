@@ -13,8 +13,9 @@ struct EpollState
     int fd;
     JTcpConn *conn;
     int event;
-    uint32_t lastTriger; // 上一次触发的时间
+    uint64_t lastTriger; // 上一次触发的时间
     EpollState();
+    void UpdateTriger();
     void Clear();
 };
 
@@ -62,13 +63,13 @@ public:
     friend class JTcpServer;
 private:
     // 上一次清理不活跃socket的时间
-    uint32_t lastClear;
+    uint64_t lastClear;
     int TimeFunc();
     JEpoller *epoller;
     bool isRunning;
     EventCallBack callback;
-    int lastTC;
-    int tcInterval;
+    uint64_t lastTC;    // last time event triger millsecond
+    uint64_t tcInterval;
     TimeCallBack timeCallBack;
 };
 

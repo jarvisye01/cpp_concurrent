@@ -29,7 +29,7 @@ public:
 
     int Init();
     void SetEventCallBack(JEventLoop::EventCallBack c);
-    void SetTimeCallBack(JEventLoop::TimeCallBack c, int interval = 3); // 默认3秒处理一次时间事件
+    void SetTimeCallBack(JEventLoop::TimeCallBack c, uint64_t interval = 3000); // 默认3秒处理一次时间事件
     int Run();
 
 private:
@@ -48,7 +48,7 @@ private:
     JEventLoop **els;
     JThread **workers;
     JEventLoop::EventCallBack ec;
-    int tcInterval;
+    uint64_t tcInterval;
     JEventLoop::TimeCallBack tc;
 };
 

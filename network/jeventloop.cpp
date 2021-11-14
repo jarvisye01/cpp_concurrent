@@ -5,21 +5,27 @@
 #include <string.h>
 #include "network/jeventloop.hpp"
 #include "util/jlog.hpp"
+#include "util/jtime.hpp"
 
 namespace jarvis
 {
 
-EpollState::EpollState(): fd(0), conn(NULL), event(0), lastTriger(time(NULL))
+EpollState::EpollState(): fd(0), conn(NULL), event(0), lastTriger(GetMillTime())
 {}
 
 void EpollState::Clear()
 {
     fd = 0;
     event = 0;
-    lastTriger = 0;
+    lastTriger = GetMillTime();
     if (conn != NULL)
         delete conn;
     conn = NULL;
+}
+
+void EpollState::UpdateTriger()
+{
+    lastTriger = GetMillTime();
 }
 
 JEpoller::JEpoller(int me): maxEvents(me), events(new epoll_event[maxEvents]), states(new EpollState[maxEvents])
@@ -43,6 +49,7 @@ int JEpoller::Register(int fd, JTcpConn *conn)
         return -1;
     states[fd].fd = fd;
     states[fd].conn = conn;
+    states[fd].UpdateTriger();
     return 0;
 }
 
@@ -121,13 +128,14 @@ EpollState* JEpoller::GetEpollState(int idx)
 // 清理不活跃的socket
 void JEpoller::ClearNonActive()
 {
-    uint32_t now = time(NULL);
+    uint64_t now = GetMillTime();
     for (int i = 0; i < maxEvents; i++)
     {
         if (states[i].fd == 0)
             continue;
-        if (now - states[i].lastTriger > 60 * 3)
+        if (now - states[i].lastTriger > 3 * 60 * 1000)
         {
+            printf("now: %d, ladt %d\n", now, states[i].lastTriger);
             // delete fd from epfd
             close(states[i].fd);
             states[i].Clear();
@@ -137,7 +145,7 @@ void JEpoller::ClearNonActive()
 }
 
 JEventLoop::JEventLoop(): 
-lastClear(time(NULL)), isRunning(false), epoller(new JEpoller(1024)), callback(NULL), timeCallBack(NULL), lastTC(time(NULL)), tcInterval(1)
+lastClear(GetMillTime()), isRunning(false), epoller(new JEpoller(1024)), callback(NULL), timeCallBack(NULL), lastTC(GetMillTime()), tcInterval(1000)
 {
     assert(epoller->Create() == 0);
 }
@@ -158,13 +166,16 @@ int JEventLoop::MainLoop()
     isRunning = true;
     while (isRunning)
     {
-       int num = epoller->Wait(tcInterval * 1000);
+       int num = epoller->Wait(tcInterval);
        // process time events
        TimeFunc();
        for (int i = 0; i < num; i++)
        {
             epoll_event *e = epoller->GetEvent(i);
             JTcpConn *conn = (JTcpConn*)(e->data.ptr);
+            if (conn == NULL)
+                continue;
+            epoller->GetEpollState(conn->GetFd())->UpdateTriger();
             if (e->events & EPOLLIN)
             {       
                 do
@@ -233,24 +244,24 @@ void JEventLoop::SetEventCallBack(EventCallBack c)
 void JEventLoop::SetTimeCallBack(TimeCallBack c, int interval)
 {
     timeCallBack = c;
-    tcInterval = tcInterval;
+    tcInterval = interval;
 }
 
 int JEventLoop::TimeFunc()
 {
     TRACE("Process time events");
-    uint32_t now = time(NULL);
-    if (now - lastClear > 60)
+    uint64_t now = GetMillTime();
+    if (now - lastClear > 120 * 1000)
     {
         epoller->ClearNonActive();
         TRACE("Clear non active socket");
-        lastClear = now;
+        lastClear = GetMillTime();
     }
     
     if (now - lastTC > tcInterval && timeCallBack != NULL)
     {
         timeCallBack(this);
-        lastTC = now;
+        lastTC = GetMillTime();
     }
     return 0;
 }
