@@ -28,6 +28,8 @@ public:
     JTcpServer& operator=(const JTcpServer&) = delete;
 
     int Init();
+    void SetEventCallBack(JEventLoop::EventCallBack c);
+    void SetTimeCallBack(JEventLoop::TimeCallBack c, int interval = 3); // 默认3秒处理一次时间事件
     int Run();
 
 private:
@@ -45,6 +47,9 @@ private:
     int en;
     JEventLoop **els;
     JThread **workers;
+    JEventLoop::EventCallBack ec;
+    int tcInterval;
+    JEventLoop::TimeCallBack tc;
 };
 
 }  // namespace jarvis

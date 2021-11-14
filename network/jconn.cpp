@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <unistd.h>
 #include <string.h>
 #include "network/jconn.hpp"
 
@@ -216,6 +217,11 @@ JTcpConn::~JTcpConn()
 int JTcpConn::GetFd()
 {
     return sockfd;
+}
+
+int JTcpConn::Close()
+{
+    return close(sockfd);
 }
 
 int JTcpConn::SendPkg(char *err)

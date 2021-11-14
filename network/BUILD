@@ -99,6 +99,7 @@ cc_binary(
         "jclient_test.cpp",
     ],
     deps = [
+        "//network:jnetutil",
     ],
     copts = [
         "-std=c++20",

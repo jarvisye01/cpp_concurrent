@@ -8,28 +8,16 @@
 #include <netinet/in.h>
 #include <string.h>
 
-int SetNoBlock(int fd)
-{
-    int flags = fcntl(fd, F_GETFL, 0);
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-}
+#include "network/jnetutil.hpp"
 
 int main(int argc, char ** argv)
 {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
-    printf("client socket %d\n", fd);
     sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    inet_aton("127.0.0.1", &addr.sin_addr);
-    addr.sin_port = htons(9000);
+    jarvis::Resolve("127.0.0.1", "9000", &addr);
+    int ret = connect(fd, (sockaddr*)&addr, (socklen_t)sizeof(addr));
 
-    printf("addr: %s\n", inet_ntoa(addr.sin_addr));
-    printf("port: %d\n", 9000);
-    
-    socklen_t len = sizeof(addr);
-    int ret = connect(fd, (sockaddr*)&addr, len);
-
-    SetNoBlock(fd);
+    jarvis::SetNonBlock(fd);
 
     char buf[14] = {0};
     const char *msg = "jarvisye";

@@ -49,6 +49,7 @@ public:
     ~JTcpConn();
     
     int GetFd();
+    int Close();
     // Send to network
     int SendPkg(char *err);
     // Receive from network

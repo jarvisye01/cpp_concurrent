@@ -121,6 +121,16 @@ int JTcpServer::StartEL()
 {
     for (int i = 0; i < en; i++)
     {
+        if ((els[i] = new JEventLoop) != NULL)
+        {
+            els[i]->SetEventCallBack(ec);
+            els[i]->SetTimeCallBack(tc, tcInterval);
+        }
+        else
+        {
+            ERROR("EventLoop[%d] id NULL", i);
+        }
+
         if (els[i] != NULL)
         {
             workers[i] = new JThread(std::function<void(void)>(std::bind(WorkFunc, els[i])), 
@@ -138,20 +148,23 @@ int JTcpServer::StartEL()
     return 0;
 }
 
+void JTcpServer::SetEventCallBack(JEventLoop::EventCallBack c)
+{
+    ec = c;
+}
+
+void JTcpServer::SetTimeCallBack(JEventLoop::TimeCallBack c, int interval)
+{
+    tc = c;
+    tcInterval = interval;
+}
+
 int JTcpServer::Run()
 {
     if (state != LISTEN)
     {
         ERROR("Server is not at LISTEN state.");
         return -1;
-    }
-
-    for (int i = 0; i < en; i++)
-    {
-        if ((els[i] = new JEventLoop) == NULL)
-        {
-            // some log
-        }
     }
     
     StartEL();
@@ -173,7 +186,7 @@ int JTcpServer::Run()
         int idx = jrand::RandN(en);
         if (els[idx] != NULL)
         {
-            TRACE("idx: %d\nclientFd %d\n", idx, clientFd);
+            TRACE("idx: %d\tclientFd %d", idx, clientFd);
             TRACE("Server accept clientIP(%s), clientPort(%d), clientFd(%d)", inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port), clientFd);
             els[idx]->epoller->Register(clientFd, conn);
             els[idx]->epoller->AddEvent(clientFd, EPOLLIN | EPOLLERR);

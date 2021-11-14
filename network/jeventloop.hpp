@@ -13,7 +13,9 @@ struct EpollState
     int fd;
     JTcpConn *conn;
     int event;
-    uint32_t lastTiger;
+    uint32_t lastTriger; // 上一次触发的时间
+    EpollState();
+    void Clear();
 };
 
 class JTcpServer;
@@ -31,33 +33,44 @@ public:
     int ModEvent(int fd, int mask);
     int DelEvent(int fd, int mask);
     int Wait(int t);
+    void ClearNonActive();
     epoll_event* GetEvent(int idx);
+    EpollState* GetEpollState(int idx);
 private:
     int maxEvents;
     int epfd;
     // 原始的event结构还是太精简了，需要新的结构更多的字段
     epoll_event *events;
-    epoll_event *rgEvents;
+    EpollState *states;
 };
 
 class JEventLoop
 {
 public:
+    typedef int (*EventCallBack)(JTcpConn *, JEventLoop *);
+    typedef int (*TimeCallBack)(JEventLoop *);
     JEventLoop();
     JEventLoop(const JEventLoop&) = delete;
     JEventLoop& operator=(const JEventLoop&) = delete;
+    JEpoller* GetEpoller();
     ~JEventLoop();
 
     int MainLoop();
+    void SetEventCallBack(EventCallBack c);
+    void SetTimeCallBack(TimeCallBack c, int interval);
 
-    friend int EventCallBack(JTcpConn *, JEventLoop *);
     friend class JTcpServer;
 private:
+    // 上一次清理不活跃socket的时间
+    uint32_t lastClear;
+    int TimeFunc();
     JEpoller *epoller;
     bool isRunning;
+    EventCallBack callback;
+    int lastTC;
+    int tcInterval;
+    TimeCallBack timeCallBack;
 };
-
-int EventCallBack(JTcpConn *, JEventLoop *);
 
 }  // namespace jarvis
 

@@ -9,12 +9,24 @@
 namespace jarvis
 {
 
-JEpoller::JEpoller(int me): maxEvents(me), events(new epoll_event[maxEvents]), rgEvents(new epoll_event[maxEvents])
+EpollState::EpollState(): fd(0), conn(NULL), event(0), lastTriger(time(NULL))
+{}
+
+void EpollState::Clear()
+{
+    fd = 0;
+    event = 0;
+    lastTriger = 0;
+    if (conn != NULL)
+        delete conn;
+    conn = NULL;
+}
+
+JEpoller::JEpoller(int me): maxEvents(me), events(new epoll_event[maxEvents]), states(new EpollState[maxEvents])
 {
     for (int i = 0; i < maxEvents; i++)
     {
         memset(&events[i], 0, sizeof(epoll_event));
-        memset(&rgEvents[i], 0, sizeof(epoll_event));
     }
 }
 
@@ -29,8 +41,8 @@ int JEpoller::Register(int fd, JTcpConn *conn)
 {
     if (fd > maxEvents)
         return -1;
-    rgEvents[fd].data.ptr = conn;
-    rgEvents[fd].events = 0;
+    states[fd].fd = fd;
+    states[fd].conn = conn;
     return 0;
 }
 
@@ -38,10 +50,7 @@ int JEpoller::UnRegister(int fd)
 {
     if (fd > maxEvents)
         return -1;
-    rgEvents[fd].events = 0;
-    JTcpConn *conn = (JTcpConn*)(rgEvents[fd].data.ptr);
-    if (conn != NULL)
-        delete conn;
+    states[fd].Clear();
     return 0;
 }
 
@@ -50,15 +59,12 @@ int JEpoller::AddEvent(int fd, int mask)
     if (fd > maxEvents)
         return -1;
 
-    int event = rgEvents[fd].events;
-    int op = event == 0 ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
-    event |= mask;
-
-    rgEvents[fd].events = event;
+    int op = states[fd].event == 0 ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
+    states[fd].event |= mask;
 
     epoll_event tmp{0};
-    tmp.data.ptr = rgEvents[fd].data.ptr;
-    tmp.events = event;
+    tmp.data.ptr = states[fd].conn;
+    tmp.events = states[fd].event;
     return epoll_ctl(epfd, op, fd, &tmp);
 }
 
@@ -67,14 +73,11 @@ int JEpoller::ModEvent(int fd, int mask)
     if (fd > maxEvents)
         return -1;
     
-    int event = rgEvents[fd].events;
-    event = mask;
-
-    rgEvents[fd].events = event;
+    states[fd].event = mask;
 
     epoll_event tmp{0};
-    tmp.data.ptr = rgEvents[fd].data.ptr;
-    tmp.events = event;
+    tmp.data.ptr = states[fd].conn;
+    tmp.events = states[fd].event;
     return epoll_ctl(epfd, EPOLL_CTL_MOD, fd, &tmp);
 }
 
@@ -83,18 +86,17 @@ int JEpoller::DelEvent(int fd, int mask)
     if (fd > maxEvents)
         return -1;
     
-    int event = rgEvents[fd].events;
-    if (mask == -1)
-        event = 0;
-    else
-        event &= (~mask);
-
-    rgEvents[fd].events = event;
-
     epoll_event tmp{0};
-    tmp.data.ptr = rgEvents[fd].data.ptr;
-    tmp.events = event;
-    return epoll_ctl(epfd, EPOLL_CTL_DEL, fd, &tmp);
+    if (mask == -1)
+    {
+        // delete socket
+        states[fd].Clear();
+        return epoll_ctl(epfd, EPOLL_CTL_DEL, fd, &tmp);
+    }
+    
+    // delete event
+    int event = states[fd].event & (~mask);
+    return ModEvent(fd, event);
 }
 
 int JEpoller::Wait(int t)
@@ -109,7 +111,33 @@ epoll_event* JEpoller::GetEvent(int idx)
     return &events[idx];
 }
 
-JEventLoop::JEventLoop(): epoller(new JEpoller(1024))
+EpollState* JEpoller::GetEpollState(int idx)
+{
+    if (maxEvents < idx)
+        return NULL;
+    return &states[idx];
+}
+
+// 清理不活跃的socket
+void JEpoller::ClearNonActive()
+{
+    uint32_t now = time(NULL);
+    for (int i = 0; i < maxEvents; i++)
+    {
+        if (states[i].fd == 0)
+            continue;
+        if (now - states[i].lastTriger > 60 * 3)
+        {
+            // delete fd from epfd
+            close(states[i].fd);
+            states[i].Clear();
+            DelEvent(states[i].fd, -1);
+        }
+    }
+}
+
+JEventLoop::JEventLoop(): 
+lastClear(time(NULL)), isRunning(false), epoller(new JEpoller(1024)), callback(NULL), timeCallBack(NULL), lastTC(time(NULL)), tcInterval(1)
 {
     assert(epoller->Create() == 0);
 }
@@ -120,12 +148,19 @@ JEventLoop::~JEventLoop()
         delete epoller;
 }
 
+JEpoller* JEventLoop::GetEpoller()
+{
+    return epoller;
+}
+
 int JEventLoop::MainLoop()
 {
     isRunning = true;
     while (isRunning)
     {
-       int num = epoller->Wait(-1);
+       int num = epoller->Wait(tcInterval * 1000);
+       // process time events
+       TimeFunc();
        for (int i = 0; i < num; i++)
        {
             epoll_event *e = epoller->GetEvent(i);
@@ -137,7 +172,7 @@ int JEventLoop::MainLoop()
                     int ret = conn->RecvPkg(NULL);
                     if (ret <= 0)
                     {
-                        close(conn->GetFd());
+                        conn->Close();
                         epoller->DelEvent(conn->GetFd(), -1);
                         epoller->UnRegister(conn->GetFd());
                         break;
@@ -148,10 +183,10 @@ int JEventLoop::MainLoop()
                         int i = 0;
                         while (i++ < 3 && checkRet == JTcpConn::SUCC)
                         {
-                            int ret = EventCallBack(conn, this);
+                            int ret = callback(conn, this);
                             if (ret != 0)
                             {
-                                close(conn->GetFd());
+                                conn->Close();
                                 epoller->DelEvent(conn->GetFd(), -1);
                                 epoller->UnRegister(conn->GetFd());
                                 break;
@@ -165,7 +200,7 @@ int JEventLoop::MainLoop()
                     }
                     else    // ERR
                     {
-                        close(conn->GetFd());
+                        conn->Close();
                         epoller->DelEvent(conn->GetFd(), -1);
                         epoller->UnRegister(conn->GetFd());
                     }
@@ -181,7 +216,7 @@ int JEventLoop::MainLoop()
 
             if (e->events & EPOLLERR)
             {
-                close(conn->GetFd());
+                conn->Close();
                 epoller->DelEvent(conn->GetFd(), -1);
                 epoller->UnRegister(conn->GetFd());
             }
@@ -190,21 +225,33 @@ int JEventLoop::MainLoop()
     return 0;
 }
 
-int EventCallBack(JTcpConn *conn, JEventLoop *el)
+void JEventLoop::SetEventCallBack(EventCallBack c)
 {
-    // read data
-    char buf[1024];
-    int ret = conn->Recv(buf, -1, NULL);
-    buf[ret] = '\0';
+    callback = c;
+}
 
-    std::string msg = "hello, ";
-    msg = msg + std::string(buf + 6);
-    int len = msg.size() + 6;
-    len = htonl(len);
-    conn->Send("ye", 2, NULL);
-    conn->Send((char *)&len, 4, NULL);
-    conn->Send(msg.c_str(), msg.size(), NULL);
-    el->epoller->AddEvent(conn->GetFd(), EPOLLOUT);
+void JEventLoop::SetTimeCallBack(TimeCallBack c, int interval)
+{
+    timeCallBack = c;
+    tcInterval = tcInterval;
+}
+
+int JEventLoop::TimeFunc()
+{
+    TRACE("Process time events");
+    uint32_t now = time(NULL);
+    if (now - lastClear > 60)
+    {
+        epoller->ClearNonActive();
+        TRACE("Clear non active socket");
+        lastClear = now;
+    }
+    
+    if (now - lastTC > tcInterval && timeCallBack != NULL)
+    {
+        timeCallBack(this);
+        lastTC = now;
+    }
     return 0;
 }
 
