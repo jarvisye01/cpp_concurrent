@@ -86,6 +86,25 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "jconfig",
+    srcs = [
+        "jconfig.cpp",
+    ],
+    hdrs = [
+        "jconfig.hpp",
+    ],
+    deps = [
+        "//file:jfile",
+        "//util:jstring",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "jutil_test",
     srcs = [
@@ -99,11 +118,11 @@ cc_binary(
         "//util:jlog",
         "//util:jrand",
         "//util:jstring",
+        "//util:jconfig",
     ],
     copts = [
         "-std=c++20",
-        "-DJBUFFER",
-        "-DJLOG",
+        "-DJCONFIG",
     ],
     linkopts = [
         "-lpthread",

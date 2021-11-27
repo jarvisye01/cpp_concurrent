@@ -3,10 +3,12 @@
 #include <unistd.h>
 #include <time.h>
 #include <functional>
+#include "concurrent/jmutex.hpp"
 #include "util/jbuffer.hpp"
 #include "util/jlog.hpp"
 #include "util/jrand.hpp"
 #include "util/jstring.hpp"
+#include "util/jconfig.hpp"
 #include "concurrent/jthread.hpp"
 
 using namespace jarvis;
@@ -87,6 +89,16 @@ int TestJLog()
     count.Wait();
 }
 
+int TestJConfig()
+{
+    jarvis::JConfig::Init("/root/test.conf");
+    int num = JConfig::GetInt("num");
+    std::string val = JConfig::GetString("key");
+    jarvis::JConfig::Done();
+    printf("read from config: num[%d] val[%s]\n", num, val.c_str());
+    return 0;
+}
+
 int main(int argc, char ** argv)
 {
 #ifdef JBUFFER
@@ -95,6 +107,9 @@ int main(int argc, char ** argv)
 #ifdef JLOG
     TestJLog();
     while (true) {}
+#endif
+#ifdef JCONFIG
+    TestJConfig();
 #endif
     return 0;
 }

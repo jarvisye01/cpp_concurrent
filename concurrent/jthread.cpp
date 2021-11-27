@@ -1,11 +1,17 @@
 
 #include <stdio.h>
+#include <string>
 #include <unistd.h>
 #include "concurrent/jthread.hpp"
 #include "util/jtime.hpp"
 
 namespace jarvis
 {
+
+JThread::JThread(std::string n): name(MakeName(n))
+{
+
+}
 
 JThread::JThread(ThreadFunc f, std::string n):
 func(f), name(MakeName(n)), state(INIT), pid(getpid()), isDetach(false)
@@ -34,6 +40,16 @@ const std::string& JThread::GetName() const
 JThread::THREADSTATE JThread::GetState() const
 {
     return state;
+}
+
+void JThread::SetThreadFunc(ThreadFunc f)
+{
+    func = f;
+}
+
+void JThread::SetName(const std::string & n)
+{
+    name = n;
 }
 
 std::string JThread::MakeName(const std::string & n)

@@ -15,7 +15,7 @@ uint64_t GetMillTime()
 {
     timespec spec;
     clock_gettime(CLOCK_REALTIME, &spec);
-    return spec.tv_sec * 1000 + spec.tv_nsec / 1000;
+    return spec.tv_sec * 1000 + spec.tv_nsec / 1000000;
 }
 
 void GetTimeDetail(int & year, int & month, int & day, int & hour, int & min, int & sec)

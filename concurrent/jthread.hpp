@@ -18,6 +18,7 @@ public:
         STOP
     };
     typedef std::function<void (void)> ThreadFunc;
+    JThread(std::string n = std::string("default"));
     JThread(ThreadFunc f, std::string n = std::string("default"));
     ~JThread();
 
@@ -25,6 +26,8 @@ public:
     pid_t GetPid() const;
     const std::string& GetName() const;
     THREADSTATE GetState() const;
+    void SetThreadFunc(ThreadFunc f);
+    void SetName(const std::string & n);
 
     int Start();
     int Join();

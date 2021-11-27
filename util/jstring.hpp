@@ -11,6 +11,8 @@ namespace jstring
 
 std::string GetRandomString(int n);
 
+std::string TrimString(const std::string & str, const std::string & s);
+
 }  // namespace jstring
 
 }  // namespace jarvis
