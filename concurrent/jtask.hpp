@@ -1,10 +1,13 @@
 #ifndef J_TASK_H
 #define J_TASK_H
 
+#include <cstdint>
+#include <cstdio>
 #include <inttypes.h>
 #include <functional>
 #include <string>
 #include <queue>
+#include <utility>
 #include <vector>
 #include "concurrent/jmutex.hpp"
 #include "concurrent/jqueue.hpp"
@@ -34,6 +37,7 @@ public:
     };
     JTimeTask();
     JTimeTask(uint64_t t);
+    JTimeTask(uint64_t t1, TIMETASKTYPE t2, uint64_t t3, std::function<int(void)> func);
     // JTimeTask(const JTimeTask & task);
     // JTimeTask operator=(const JTimeTask & task);
     ~JTimeTask();
@@ -47,6 +51,8 @@ public:
     void SetFunc(std::function<int(void)> func);
     void SetRepeat(uint64_t t);
     bool operator<(const JTimeTask & task) const;
+
+    friend void print(const JTimeTask & task);
 private:
     uint64_t tc;
     TIMETASKTYPE tt;
@@ -91,6 +97,33 @@ private:
     std::vector<int> processNum;
     JThread *monitor;
 };
+
+// try template class
+template<typename T>
+class JGeneralTaskPool: public JPool
+{
+public:
+    typedef T value_type;
+
+    JGeneralTaskPool();
+    ~JGeneralTaskPool();
+    void Init(const std::string & config);
+    int Start();
+    int RegistTask(const value_type & task);
+    int RegistTask(value_type && task);
+    int UnRegistTask(uint64_t id);
+private:
+    std::priority_queue<value_type> waitQ;
+    JMutex mutex;
+    JSyncQueue<value_type> execQ;
+    int tNum;
+    JThread *threads;
+    std::vector<int> processNum;
+    JThread *monitor;
+};
+
+// some util function
+void print(const JTimeTask & task);
 
 }   // namespace jarvis
 #endif

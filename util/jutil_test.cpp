@@ -9,6 +9,7 @@
 #include "util/jrand.hpp"
 #include "util/jstring.hpp"
 #include "util/jconfig.hpp"
+#include "util/jref.hpp"
 #include "concurrent/jthread.hpp"
 
 using namespace jarvis;
@@ -99,6 +100,23 @@ int TestJConfig()
     return 0;
 }
 
+int TestJRef()
+{
+    jarvis::JUseCount r1;
+    auto r2 = r1;
+    r1.AddRef();
+    r1.DelRef();
+    printf("r1 ref count: %d\n", r1.RefCount());
+    printf("r2 ref count: %d\n", r2.RefCount());
+    {
+        jarvis::JUseCount r3(r1);
+        printf("r3 ref count: %d\n", r3.RefCount());
+        printf("r1 ref count: %d\n", r1.RefCount());
+    }
+    r1 = r1;
+    printf("r1 ref count: %d\n", r1.RefCount());
+}
+
 int main(int argc, char ** argv)
 {
 #ifdef JBUFFER
@@ -110,6 +128,9 @@ int main(int argc, char ** argv)
 #endif
 #ifdef JCONFIG
     TestJConfig();
+#endif
+#ifdef JREF
+    TestJRef();
 #endif
     return 0;
 }

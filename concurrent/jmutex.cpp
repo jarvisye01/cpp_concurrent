@@ -1,9 +1,12 @@
 #include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "jmutex.hpp"
 #include "util/jtime.hpp"
+#include "file/jfile.hpp"
 
 namespace jarvis
 {
@@ -152,6 +155,49 @@ int JBarrier::Wait()
             cond.Wait();
     }
     return 0;
+}
+
+JFileLock::JFileLock(const std::string path)
+{
+    fd = jfile::OpenFile(path);
+    printf("open file for lock: %s\n", path.c_str());
+    status = 1;
+    if (fd < 0)
+        status = 0;
+    SetLock(F_WRLCK, SEEK_SET, 0, 1);
+}
+
+JFileLock::~JFileLock()
+{
+    if (refCount.IsOnly())
+    {
+        jfile::CloseFile(fd);
+        printf("close lock file\n");
+    }
+    else
+        refCount.DelRef();
+}
+
+flock JFileLock::FILE_LOCK;
+
+int JFileLock::SetLock(int type, int where, int start, int len)
+{
+    FILE_LOCK.l_type = type;
+    FILE_LOCK.l_whence = where;
+    FILE_LOCK.l_start = start;
+    FILE_LOCK.l_len = len;
+    return 0;
+}
+
+
+int JFileLock::Lock()
+{
+    return fcntl(fd, F_SETLKW, &FILE_LOCK);
+}
+
+int JFileLock::UnLock()
+{
+    return fcntl(fd, F_UNLCK, &FILE_LOCK;
 }
 
 }   // namespace jarvis

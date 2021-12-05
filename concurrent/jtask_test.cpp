@@ -35,6 +35,7 @@ int TestTask()
             tasks[i].SetFunc(std::function<int(void)>(hello));
 
         tasks[i].SetRepeat(1000 * (i + 1));
+        jarvis::print(tasks[i]);
         pool.RegistTask(tasks[i]);
     }
 

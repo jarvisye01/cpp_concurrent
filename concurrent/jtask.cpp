@@ -1,3 +1,6 @@
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
 #include <unistd.h>
 #include <functional>
 #include <deque>
@@ -14,6 +17,10 @@ namespace jarvis
 {
 
 JTimeTask::JTimeTask(): tc(GetMillTime()), tt(SINGLE)
+{}
+
+JTimeTask::JTimeTask(uint64_t t1, TIMETASKTYPE t2, uint64_t t3, std::function<int(void)> func)
+:tc(t1), tt(t2), td(t3), f(func)
 {}
 
 JTimeTask::~JTimeTask()
@@ -72,6 +79,10 @@ JTimeTaskPool::JTimeTaskPool()
 
 JTimeTaskPool::~JTimeTaskPool()
 {
+    if (threads != NULL)
+        delete [] threads;
+    if (monitor != NULL)
+        delete monitor;
 }
 
 void JTimeTaskPool::Init(const std::string & config) 
@@ -93,7 +104,7 @@ int JTimeTaskPool::Start()
         threads[i].SetThreadFunc(std::function<void(void)>([i, this] () {
             while (true)
             {
-                JTimeTask task = execQ.Pop();
+                decltype(execQ.Pop()) task = execQ.Pop();
                 INFO("trigger time %lu", task.GetTriggerTime());
                 int t = task.GetNextTriggerTime();
                 // repeat event
@@ -121,7 +132,7 @@ int JTimeTaskPool::Start()
                 // INFO("now time %llu", now);
                 while (waitQ.size() > 0 && waitQ.top().GetTriggerTime() <= now)
                 {
-                    JTimeTask task = waitQ.top();
+                    auto task = waitQ.top();
                     waitQ.pop();
                     execQ.Push(task);
                 }
@@ -163,6 +174,16 @@ int JTimeTaskPool::UnRegistTask(uint64_t id)
 
     waitQ = tmp;
     return exist ? 0 : -1;
+}
+
+// some util function
+void print(const JTimeTask & task)
+{
+    printf("task id: %lu\n", task.GetTaskID());
+    printf("task trigger time: %lu\n", task.tc);
+    printf("task type: %s\n", task.tt == JTimeTask::SINGLE ? "single" : "repeat");
+    if (task.tt == JTimeTask::REPEAT)
+        printf("task trigger distance: %lu\n", task.td);
 }
 
 }   // namespace jarvis

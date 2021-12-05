@@ -105,6 +105,23 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "jref",
+    srcs = [
+        "jref.cpp",
+    ],
+    hdrs = [
+        "jref.hpp",
+    ],
+    deps = [
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "jutil_test",
     srcs = [
@@ -119,10 +136,12 @@ cc_binary(
         "//util:jrand",
         "//util:jstring",
         "//util:jconfig",
+        "//util:jref",
     ],
     copts = [
         "-std=c++20",
         "-DJCONFIG",
+        "-DJREF",
     ],
     linkopts = [
         "-lpthread",
