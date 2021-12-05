@@ -7,6 +7,8 @@
 
 很多东西都是看了陈硕大佬的东西写下的，算是一种copy吧，希望以这种方式让自己进步一点。
 
+个人博客：https://mr-xingjian.github.io/
+
 # concurrent
 - JMutex、JCond、JBrarrier、JCountLatch：实现了Mutex、Cond、Barrrier、CountLatch等基础同步组件。
 - JThread：封装了线程相关的操作，可以很方便的启动一个线程，代码里面很多地方都是通过JThread类结合一个lambda函数启动一个线程。
