@@ -157,47 +157,45 @@ int JBarrier::Wait()
     return 0;
 }
 
-JFileLock::JFileLock(const std::string path)
+JFileLock::JFileLock(int fd): lockFd(fd), status(1)
 {
-    fd = jfile::OpenFile(path);
-    printf("open file for lock: %s\n", path.c_str());
-    status = 1;
-    if (fd < 0)
+    if (lockFd < 0)
         status = 0;
-    SetLock(F_WRLCK, SEEK_SET, 0, 1);
 }
 
 JFileLock::~JFileLock()
 {
-    if (refCount.IsOnly())
-    {
-        jfile::CloseFile(fd);
-        printf("close lock file\n");
-    }
-    else
-        refCount.DelRef();
 }
 
-flock JFileLock::FILE_LOCK;
-
-int JFileLock::SetLock(int type, int where, int start, int len)
+int JFileLock::SetLock(flock * lock, int type, int where, int start, int len)
 {
-    FILE_LOCK.l_type = type;
-    FILE_LOCK.l_whence = where;
-    FILE_LOCK.l_start = start;
-    FILE_LOCK.l_len = len;
+    if (lock == NULL)
+        return -1;
+    memset(lock, 0, sizeof(flock));
+    lock->l_type = type;
+    lock->l_whence = where;
+    lock->l_start = start;
+    lock->l_len = len;
     return 0;
 }
 
 
 int JFileLock::Lock()
 {
-    return fcntl(fd, F_SETLKW, &FILE_LOCK);
+    if (status == 0)
+        return -1;
+    struct flock tlock;
+    SetLock(&tlock, F_WRLCK, SEEK_SET, 0, 1);
+    return fcntl(lockFd, F_SETLKW, &tlock);
 }
 
 int JFileLock::UnLock()
 {
-    return fcntl(fd, F_UNLCK, &FILE_LOCK;
+    if (status == 0)
+        return -1;
+    struct flock tlock;
+    SetLock(&tlock, F_UNLCK, SEEK_SET, 0, 1);
+    return fcntl(lockFd, F_SETLKW, &tlock);
 }
 
 }   // namespace jarvis

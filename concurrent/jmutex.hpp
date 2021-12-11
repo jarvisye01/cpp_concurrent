@@ -1,8 +1,8 @@
 #ifndef J_MUTEX_H
 #define J_MUTEX_H
-#include <clocale>
 #include <fcntl.h>
 #include <pthread.h>
+#include <assert.h>
 #include <string>
 #include "util/jref.hpp"
 
@@ -88,18 +88,15 @@ private:
 class JFileLock
 {
 public:
-    JFileLock(const std::string path);
+    JFileLock(int fd);
     ~JFileLock();
 
     int Lock();
     int UnLock();
 private:
-    static flock FILE_LOCK;
-    static int SetLock(int type, int where, int start, int len);
-    // 确定delete的时候需不需要关闭文件
-    JUseCount refCount;
+    static int SetLock(flock * lock, int type, int where, int start, int len);
     int status;
-    int fd;
+    int lockFd;
 };
 
 template<typename T>
@@ -108,11 +105,11 @@ class JGeneralLockGuard
 public:
     JGeneralLockGuard(T & t): lock(t)
     {
-        lock.Lock();
+        assert(lock.Lock() == 0);
     }
     ~JGeneralLockGuard()
     {
-        lock.UnLock();
+        assert(lock.UnLock() == 0);
     }
 private:
     T & lock;

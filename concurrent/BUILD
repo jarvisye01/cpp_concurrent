@@ -8,6 +8,8 @@ cc_library(
     ],
     deps = [
         "//util:jtime",
+        "//util:jref",
+        "//file:jfile",
     ],
     copts = [
         "-std=c++20",
@@ -88,8 +90,10 @@ cc_binary(
         "concurrent_test.cpp",
     ],
     deps = [
-        ":jthread",
-        "jmutex",
+        "//concurrent:jthread",
+        "//concurrent:jmutex",
+        "//file:jfile",
+        "//util:jtime",
     ],
     copts = [
         "-std=c++20",

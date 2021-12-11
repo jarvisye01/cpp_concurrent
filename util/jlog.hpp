@@ -8,6 +8,9 @@
 #include "concurrent/jmutex.hpp"
 #include "concurrent/jqueue.hpp"
 
+
+// Warn: 不要在多进程环境中使用此日志框架，pthread中的东西经过fork之后会变得复杂且难以控制
+
 #define TRACE(fmt, args...)\
         do  \
         {   \
