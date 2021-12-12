@@ -1,9 +1,13 @@
 #include <algorithm>
+#include <asm-generic/errno-base.h>
+#include <bits/posix_opt.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <stddef.h>
 #include <unistd.h>
-#include "string.h"
-#include "assert.h"
+#include <errno.h>
+#include <string.h>
+#include <assert.h>
 #include "util/jbuffer.hpp"
 
 namespace jarvis
@@ -210,7 +214,7 @@ int JBufferBase::Read(void * buf, size_t sz)
     int rn = std::min(sz, wp - rp);
     memcpy(buf, data + rp, rn);
     rp += rn;
-    Expand(wp - rp);
+    Expand(GetPow2Bound(wp - rp));
     return rn;
 }
 
@@ -247,6 +251,7 @@ void JBufferBase::EnsureSpace(int n)
 void JBufferBase::Move()
 {
     memcpy(data, data + rp, wp - rp);
+    wp -= rp, rp = 0;
 }
 
 void JBufferBase::Expand(int n)
@@ -257,7 +262,62 @@ void JBufferBase::Expand(int n)
         memcpy(tmp, data + rp, wp - rp);
         delete [] data;
     }
+    wp -= rp, rp = 0;
     data = tmp;
+}
+
+// ===========JGenIOBufferBase============
+JGenIOBufferBase::JGenIOBufferBase(int h): handle(h)
+{
+}
+
+int JGenIOBufferBase::WriteTo(size_t sz)
+{
+    if (sz < 0)
+        throw JIntOptExp(sz);
+    int wn = std::min(sz, wp - rp);
+    int widx = 0;
+    while (widx < wn)
+    {
+        int ret = ::write(handle, data + rp + widx, wn - widx);
+        if (ret == 0) 
+        {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            break;
+        }
+        else if (ret < 0)
+        {
+            return -1;
+        }
+        rp += ret, widx += ret;
+    }
+    Expand(GetPow2Bound(wp - rp));
+    return widx;
+}
+
+int JGenIOBufferBase::ReadFrom(size_t sz)
+{
+    if (sz < 0)
+        throw JIntOptExp(sz);
+    EnsureSpace(sz);
+    int rn = sz, ridx = 0;
+    while (ridx < rn)
+    {
+        int ret = ::read(handle, data + wp, rn - ridx);
+        if (ret == 0)
+        {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            break;
+        }
+        else if (ret < 0)
+        {
+            return -1;
+        }
+        wp += ret, ridx += ret;
+    }
+    return ridx;
 }
 
 };  // namespace jutil

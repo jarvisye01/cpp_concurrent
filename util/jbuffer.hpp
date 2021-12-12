@@ -86,7 +86,7 @@ public:
     void Reset();
     int Size() const;
     int Capacity() const;
-private:
+protected:
     // 保证内部有足够的空间写入n个数据
     void EnsureSpace(int n);
     // 将数据移动到data的前面
@@ -120,7 +120,7 @@ public:
 class JGenIOBufferBase: public JIOBufferBase
 {
 public:
-    JGenIOBufferBase(int handle = -1);
+    JGenIOBufferBase(int h = -1);
     ~JGenIOBufferBase();
 
     int WriteTo(size_t sz);
