@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <stdio.h>
+#include <stddef.h>
 #include <unistd.h>
 #include "string.h"
 #include "assert.h"
@@ -129,6 +131,7 @@ int JBuffer::WriteTo(int fd)
     }
 
     Reset();
+    return avai;
 }
 
 std::string JBuffer::ToString() const
@@ -138,5 +141,125 @@ std::string JBuffer::ToString() const
     sprintf(buf, fmt, size, rp, wp, Avai(), Rest());
     return std::string(buf);
 }
+
+namespace jutil
+{
+
+int GetPow2Bound(int n)
+{
+    int num = 1;
+    while (num < n)
+        num >> 1;
+    return num;
+}
+
+// ===========exception=============
+const char* JOutOfBoundExp::what() const noexcept
+{
+    return "out of bound error!";
+}
+
+JIntOptExp::JIntOptExp(int opp): op(opp) {}
+
+const char* JIntOptExp::what() const noexcept
+{
+    return "int opt error!";
+}
+
+int JIntOptExp::GetIntOpt() const { return op; }
+
+// ===========buffer===========
+JBufferBase::JBufferBase(int initSize): rp(0), wp(0), size(initSize), data(new char[size])
+{
+    if (initSize <= 0)
+        throw JIntOptExp(initSize);
+}
+
+JBufferBase::JBufferBase(const JBufferBase & jbuf): rp(jbuf.rp), wp(jbuf.wp), size(jbuf.size), data(new char[size])
+{
+    memcpy(data + rp, jbuf.data + rp, wp - rp);
+}
+
+JBufferBase& JBufferBase::operator=(const JBufferBase & jbuf)
+{
+    if (this == &jbuf)
+        return *this;
+    Reset();
+    rp = jbuf.rp, wp = jbuf.wp, size = jbuf.size;
+    data = new char [size];
+    memcpy(data, jbuf.data + rp, wp - rp);
+    return *this;
+}
+
+JBufferBase::~JBufferBase()
+{
+    if (data != NULL)
+        delete [] data, data = NULL;
+}
+
+int JBufferBase::Write(const void * buf, size_t sz)
+{
+    EnsureSpace(sz);
+    memcpy(data + wp, buf, sz);
+    wp += sz;
+    return sz;
+}
+
+int JBufferBase::Read(void * buf, size_t sz)
+{
+    int rn = std::min(sz, wp - rp);
+    memcpy(buf, data + rp, rn);
+    rp += rn;
+    Expand(wp - rp);
+    return rn;
+}
+
+void JBufferBase::Reset()
+{
+    rp = wp = 0;
+    size = 0;
+    if (data != NULL)
+        delete [] data, data = NULL;
+}
+
+int JBufferBase::Size() const
+{
+    return wp - rp;
+}
+
+int JBufferBase::Capacity() const
+{
+    return size;
+}
+
+void JBufferBase::EnsureSpace(int n)
+{
+    if (size - wp >= n) 
+        return;
+    if (size - (wp - rp) >= n)
+    {
+        Move();
+        return;
+    }
+    Expand(GetPow2Bound(n) * 2);
+}
+
+void JBufferBase::Move()
+{
+    memcpy(data, data + rp, wp - rp);
+}
+
+void JBufferBase::Expand(int n)
+{
+    char * tmp = new char[n];
+    if (data != NULL)
+    {
+        memcpy(tmp, data + rp, wp - rp);
+        delete [] data;
+    }
+    data = tmp;
+}
+
+};  // namespace jutil
 
 }   // namespace jarvis
