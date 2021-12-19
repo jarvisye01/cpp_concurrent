@@ -147,3 +147,24 @@ cc_binary(
         "-lpthread",
     ],
 )
+
+cc_binary(
+    name = "jbuffer_test",
+    srcs = [
+        "jbuffer_test.cpp",
+    ],
+    deps = [
+        "//util:jbuffer",
+        "//util:jrand",
+        "//util:jstring",
+        "//util:jtime",
+        "//file:jfile",
+    ],
+    copts = [
+        "-std=c++11",
+        "-DJCONFIG",
+        "-DJREF",
+    ],
+    linkopts = [
+    ],
+)

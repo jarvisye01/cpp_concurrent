@@ -210,6 +210,11 @@ size_t JBufferBase::Write(const void * buf, size_t sz)
     return sz;
 }
 
+size_t JBufferBase::Write(const std::string & str)
+{
+    return Write(str.c_str(), str.size());
+}
+
 size_t JBufferBase::Read(void * buf, size_t sz)
 {
     int rn = std::min(sz, wp - rp);
@@ -334,6 +339,7 @@ void JGenIOBufferBase::SetHandle(int h)
     handle = h;
 }
 
+// ===========JNetBuffer============
 JNetBuffer::JNetBuffer(int h): JGenIOBufferBase(h)
 {}
 

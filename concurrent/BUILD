@@ -84,6 +84,24 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "jshm",
+    srcs = [
+        "jshm.cpp",
+    ],
+    hdrs = [
+        "jshm.hpp",
+    ],
+    deps = [
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "concurrent_test",
     srcs = [

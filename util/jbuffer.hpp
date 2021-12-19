@@ -82,6 +82,7 @@ public:
     JBufferBase& operator=(const JBufferBase & jbug);
     virtual ~JBufferBase();
     size_t Write(const void * buf, size_t sz);
+    size_t Write(const std::string & str);
     size_t Read(void * buf, size_t sz);
     void Reset();
     size_t Size() const;
