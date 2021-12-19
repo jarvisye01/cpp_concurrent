@@ -1,6 +1,5 @@
 #include <algorithm>
-#include <asm-generic/errno-base.h>
-#include <bits/posix_opt.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stddef.h>
@@ -8,6 +7,8 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
+#include <string.h>
+#include <sys/socket.h>
 #include "util/jbuffer.hpp"
 
 namespace jarvis
@@ -153,7 +154,7 @@ int GetPow2Bound(int n)
 {
     int num = 1;
     while (num < n)
-        num >> 1;
+        num = num << 1;
     return num;
 }
 
@@ -173,7 +174,7 @@ const char* JIntOptExp::what() const noexcept
 int JIntOptExp::GetIntOpt() const { return op; }
 
 // ===========buffer===========
-JBufferBase::JBufferBase(int initSize): rp(0), wp(0), size(initSize), data(new char[size])
+JBufferBase::JBufferBase(size_t initSize): rp(0), wp(0), size(initSize), data(new char[size])
 {
     if (initSize <= 0)
         throw JIntOptExp(initSize);
@@ -201,7 +202,7 @@ JBufferBase::~JBufferBase()
         delete [] data, data = NULL;
 }
 
-int JBufferBase::Write(const void * buf, size_t sz)
+size_t JBufferBase::Write(const void * buf, size_t sz)
 {
     EnsureSpace(sz);
     memcpy(data + wp, buf, sz);
@@ -209,7 +210,7 @@ int JBufferBase::Write(const void * buf, size_t sz)
     return sz;
 }
 
-int JBufferBase::Read(void * buf, size_t sz)
+size_t JBufferBase::Read(void * buf, size_t sz)
 {
     int rn = std::min(sz, wp - rp);
     memcpy(buf, data + rp, rn);
@@ -226,17 +227,17 @@ void JBufferBase::Reset()
         delete [] data, data = NULL;
 }
 
-int JBufferBase::Size() const
+size_t JBufferBase::Size() const
 {
     return wp - rp;
 }
 
-int JBufferBase::Capacity() const
+size_t JBufferBase::Capacity() const
 {
     return size;
 }
 
-void JBufferBase::EnsureSpace(int n)
+void JBufferBase::EnsureSpace(size_t n)
 {
     if (size - wp >= n) 
         return;
@@ -245,7 +246,7 @@ void JBufferBase::EnsureSpace(int n)
         Move();
         return;
     }
-    Expand(GetPow2Bound(n) * 2);
+    Expand(GetPow2Bound(size + n) * 2);
 }
 
 void JBufferBase::Move()
@@ -254,8 +255,11 @@ void JBufferBase::Move()
     wp -= rp, rp = 0;
 }
 
-void JBufferBase::Expand(int n)
+void JBufferBase::Expand(size_t n)
 {
+    if (n < 0)
+        throw JIntOptExp(n);
+    n = n < 4 ? 4 : n;
     char * tmp = new char[n];
     if (data != NULL)
     {
@@ -271,15 +275,18 @@ JGenIOBufferBase::JGenIOBufferBase(int h): handle(h)
 {
 }
 
-int JGenIOBufferBase::WriteTo(size_t sz)
+JGenIOBufferBase::~JGenIOBufferBase()
+{}
+
+size_t JGenIOBufferBase::WriteTo(size_t sz)
 {
     if (sz < 0)
         throw JIntOptExp(sz);
-    int wn = std::min(sz, wp - rp);
-    int widx = 0;
+    size_t wn = std::min(sz, wp - rp);
+    size_t widx = 0;
     while (widx < wn)
     {
-        int ret = ::write(handle, data + rp + widx, wn - widx);
+        size_t ret = ::write(handle, data + rp, wn - widx);
         if (ret == 0) 
         {
             if (errno == EAGAIN || errno == EINTR)
@@ -296,15 +303,77 @@ int JGenIOBufferBase::WriteTo(size_t sz)
     return widx;
 }
 
-int JGenIOBufferBase::ReadFrom(size_t sz)
+size_t JGenIOBufferBase::ReadFrom(size_t sz)
 {
     if (sz < 0)
         throw JIntOptExp(sz);
     EnsureSpace(sz);
-    int rn = sz, ridx = 0;
+    size_t rn = sz, ridx = 0;
     while (ridx < rn)
     {
         int ret = ::read(handle, data + wp, rn - ridx);
+        if (ret == 0)
+        {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            break;
+        }
+        else if (ret < 0)
+        {
+            return -1;
+        }
+        wp += ret, ridx += ret;
+    }
+    return ridx;
+}
+
+void JGenIOBufferBase::SetHandle(int h)
+{
+    if (h <= 0)
+        throw JIntOptExp(h);
+    handle = h;
+}
+
+JNetBuffer::JNetBuffer(int h): JGenIOBufferBase(h)
+{}
+
+JNetBuffer::~JNetBuffer()
+{}
+
+size_t JNetBuffer::WriteTo(size_t sz)
+{
+    if (sz < 0)
+        throw JIntOptExp(sz);
+    size_t wn = std::min(sz, wp - rp);
+    size_t widx = 0;
+    while (widx < wn)
+    {
+        size_t ret = ::send(handle, data + rp + widx, wn - widx, 0);
+        if (ret == 0)
+        {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
+            break;
+        }
+        else if (ret < 0)
+        {
+            return -1;
+        }
+        rp += ret, widx += ret;
+    }
+    Expand(GetPow2Bound(wp - rp));
+    return widx;
+}
+
+size_t JNetBuffer::ReadFrom(size_t sz)
+{
+    if (sz < 0)
+        throw JIntOptExp(sz);
+    EnsureSpace(sz);
+    size_t rn = sz, ridx = 0;
+    while (ridx < rn)
+    {
+        size_t ret = ::recv(handle, data + wp, rn - ridx, 0);
         if (ret == 0)
         {
             if (errno == EAGAIN || errno == EINTR)

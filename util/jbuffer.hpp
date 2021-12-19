@@ -64,8 +64,8 @@ private:
 class JBuffer
 {
 public:
-    virtual int Write(const void * buf, size_t sz) = 0;
-    virtual int Read(void * buf, size_t sz) = 0;
+    virtual size_t Write(const void * buf, size_t sz) = 0;
+    virtual size_t Read(void * buf, size_t sz) = 0;
     virtual void Reset() {};
     virtual ~JBuffer() {}
 };
@@ -77,22 +77,22 @@ public:
 class JBufferBase: public JBuffer
 {
 public:
-    JBufferBase(int initSize = 1);
+    JBufferBase(size_t initSize = 1);
     JBufferBase(const JBufferBase & jbuf);
     JBufferBase& operator=(const JBufferBase & jbug);
     virtual ~JBufferBase();
-    int Write(const void * buf, size_t sz);
-    int Read(void * buf, size_t sz);
+    size_t Write(const void * buf, size_t sz);
+    size_t Read(void * buf, size_t sz);
     void Reset();
-    int Size() const;
-    int Capacity() const;
+    size_t Size() const;
+    size_t Capacity() const;
 protected:
     // 保证内部有足够的空间写入n个数据
-    void EnsureSpace(int n);
+    void EnsureSpace(size_t n);
     // 将数据移动到data的前面
     void Move();
     // 扩展/释放空间
-    void Expand(int n);
+    void Expand(size_t n);
     size_t rp;
     size_t wp;
     size_t size;
@@ -108,9 +108,9 @@ class JIOBufferBase: public JBufferBase
 public:
     virtual ~JIOBufferBase() {}
     // 将buffer数据写到相应地方
-    virtual int WriteTo(size_t sz) = 0;
+    virtual size_t WriteTo(size_t sz) = 0;
     // 从相应地方读数据到buffer
-    virtual int ReadFrom(size_t sz) = 0;
+    virtual size_t ReadFrom(size_t sz) = 0;
 };
 
 /*
@@ -123,25 +123,31 @@ public:
     JGenIOBufferBase(int h = -1);
     ~JGenIOBufferBase();
 
-    int WriteTo(size_t sz);
-    int ReadFrom(size_t sz);
-private:
+    size_t WriteTo(size_t sz);
+    size_t ReadFrom(size_t sz);
+    void SetHandle(int h);
+protected:
     int handle;
 };
 
 /*
  * 专用于文件的buffer
  */
-class JFileBuffer: public JIOBufferBase
-{
-};
+typedef JGenIOBufferBase JFileBuffer;
 
 /*
  * 专用于网络的buffer
  * WriteTo和RecvFrom跟文件buffer实现不同
  */
-class JNetBuffer: public JIOBufferBase
+class JNetBuffer: public JGenIOBufferBase
 {
+public:
+    JNetBuffer(int h = -1);
+    ~JNetBuffer();
+
+    // 重载
+    size_t WriteTo(size_t sz);
+    size_t ReadFrom(size_t sz);
 };
 
 };
