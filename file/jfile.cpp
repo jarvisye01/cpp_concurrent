@@ -18,7 +18,7 @@ void CloseStdIO()
 
 int OpenFile(const std::string & path)
 {
-    int fd = open(path.c_str(), O_CREAT | O_RDWR | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int fd = open(path.c_str(), O_CREAT | O_RDWR | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd < 0)
         return -1;
     return fd;
@@ -49,6 +49,11 @@ int CopyFile(const std::string & from, const std::string & to)
     close(fd1);
     close(fd2);
     return 0;
+}
+
+int SetCloseExec(int fd)
+{
+    return fcntl(fd, F_SETFD, 1);
 }
 
 }   // namespace jfile

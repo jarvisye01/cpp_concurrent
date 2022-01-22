@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
@@ -11,8 +12,10 @@
 #include <sys/shm.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <assert.h>
 #include "concurrent/jthread.hpp"
 #include "concurrent/jmutex.hpp"
+#include "concurrent/jshm.hpp"
 #include "file/jfile.hpp"
 #include "util/jtime.hpp"
 
@@ -124,11 +127,54 @@ int TestFileLock()
     return 0;
 }
 
+int TestShm()
+{
+    jarvis::JShmAllocator<int> allocator(1, 100);
+    assert(allocator.Alloc() == 0);
+    int & count = ((int*)allocator.GetAddr())[0];
+    count = 0;
+
+    // create a file for lock
+    int lockFd = jfile::OpenFile("/root/temp.lock");
+    pid_t pids[5];
+    for (int i = 0; i < 5; i++)
+    {
+        if ((pids[i] = fork()) < 0)
+        {
+            printf("fork error");
+        }
+        else if (pids[i] == 0)
+        {
+            JFileLock flock(lockFd);
+            for (int j = 0; j < 100000; j++)
+            {
+                JGeneralLockGuard<JFileLock> helper(flock);
+                count++;
+            }
+            exit(0);
+        }
+        else
+        {
+            // parent process
+        }
+    }
+
+    for (int i = 0; i < 5; i++)
+    {
+        printf("wait process %d\n", pids[i]);
+        waitpid(pids[i], NULL, 0);
+    }
+
+    printf("count: %d\n", count);
+    return 0;
+}
+
 int main(int argc, char ** argv)
 {
-    printf("start test mutex\n");
+    printf("start test concurrent component!\n");
     // cpu info: 4核8GB腾讯云服务器，这性能差的也太多了
     TestMutex();    // about 25s
     TestFileLock(); // about 1620s
+    TestShm();
     return 0;
 }

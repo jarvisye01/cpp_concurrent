@@ -17,6 +17,8 @@ int CloseFile(int fd);
 
 int CopyFile(const std::string & from, const std::string & to);
 
+int SetCloseExec(int fd);
+
 }   // namespace jfile
 
 }   // namespace jarvis

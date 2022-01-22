@@ -88,6 +88,7 @@ cc_library(
     name = "jshm",
     srcs = [
         "jshm.cpp",
+        "jshm.hpp",
     ],
     hdrs = [
         "jshm.hpp",
@@ -110,6 +111,7 @@ cc_binary(
     deps = [
         "//concurrent:jthread",
         "//concurrent:jmutex",
+        "//concurrent:jshm",
         "//file:jfile",
         "//util:jtime",
     ],

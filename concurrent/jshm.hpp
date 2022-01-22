@@ -1,5 +1,7 @@
 #ifndef J_SHM_H
 #define J_SHM_H
+#include <string.h>
+#include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
@@ -7,7 +9,7 @@ namespace jarvis
 {
 
 // Get shared memory
-int GetShm(key_t key, size_t sz, int flag, bool * exist);
+int GetShm(key_t key, size_t sz, int flag);
 
 // Set shared memory
 int SetShm(int shmId, struct shmid_ds *buf);
@@ -45,23 +47,22 @@ JShmAllocator<T>::JShmAllocator(int s, key_t k): sz(s), key(k), shmId(-1)
 template<typename T>
 JShmAllocator<T>::~JShmAllocator()
 {
-    if (shmId > 0)
+    if (shmId > 0 && data != NULL)
     {
         DetachShm(data);
         DelShm(shmId);
+        shmId = -1;
     }
 }
 
 template<typename T>
 int JShmAllocator<T>::Alloc()
 {
-    int ret = 0;
-    if ((ret = GetShm(key, sz * sizeof(T), 0, NULL)) != 0)
-        return ret;
-    shmId = ret;
-    if ((ret = AttachShm(shmId, 0)) != 0)
-        return ret;
-    return ret;
+    if ((shmId = GetShm(key, sz * sizeof(T), IPC_CREAT)) < 0)
+        return -1;
+    if ((data = static_cast<T*>(AttachShm(shmId, 0))) == NULL)
+        return -1;
+    return 0;
 }
 
 template<typename T>

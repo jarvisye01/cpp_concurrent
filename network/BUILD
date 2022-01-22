@@ -34,6 +34,23 @@ cc_library(
 )
 
 cc_library(
+    name = "jsocket",
+    srcs = [
+        "jsocket.cpp",
+    ],
+    hdrs = [
+        "jsocket.hpp",
+    ],
+    deps = [
+        "//util:jbuffer",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "jeventloop",
     srcs = [
         "jeventloop.cpp",
