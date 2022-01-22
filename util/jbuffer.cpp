@@ -266,13 +266,16 @@ void JBufferBase::Expand(size_t n)
         throw JIntOptExp(n);
     n = n < 4 ? 4 : n;
     char * tmp = new char[n];
+    size_t len = 0;
     if (data != NULL)
     {
-        memcpy(tmp, data + rp, wp - rp);
+        size_t len = std::min(n, wp - rp);
+        memcpy(tmp, data + rp, len);
         delete [] data;
     }
-    wp -= rp, rp = 0;
+    wp = len, rp = 0;
     data = tmp;
+    size = n;
 }
 
 // ===========JGenIOBufferBase============

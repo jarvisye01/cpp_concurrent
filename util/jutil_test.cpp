@@ -11,6 +11,7 @@
 #include "util/jconfig.hpp"
 #include "util/jref.hpp"
 #include "concurrent/jthread.hpp"
+#include "file/jfile.hpp"
 
 using namespace jarvis;
 
@@ -117,6 +118,23 @@ int TestJRef()
     printf("r1 ref count: %d\n", r1.RefCount());
 }
 
+int TestNewBuffer()
+{
+    jarvis::jutil::JFileBuffer buffer;
+    int handle = jfile::OpenFile("/root/testbuffer.txt");
+    buffer.SetHandle(handle);
+    for (int i = 0; i < 1000; i++)
+    {
+        std::string str = jstring::GetRandomString(jrand::RandN(10000) + 1000);
+        printf("%s\n", str.c_str());
+        str += "\n";
+        buffer.Write(str);
+        buffer.WriteTo(buffer.Size());
+    }
+    jfile::CloseFile(handle);
+    return 0;
+}
+
 int main(int argc, char ** argv)
 {
 #ifdef JBUFFER
@@ -131,6 +149,9 @@ int main(int argc, char ** argv)
 #endif
 #ifdef JREF
     TestJRef();
+#endif
+#ifdef JNEWBUFFER
+    TestNewBuffer();
 #endif
     return 0;
 }

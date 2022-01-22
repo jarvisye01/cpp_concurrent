@@ -140,8 +140,9 @@ cc_binary(
     ],
     copts = [
         "-std=c++20",
-        "-DJCONFIG",
-        "-DJREF",
+        # "-DJCONFIG",
+        # "-DJREF",
+        "-DJNEWBUFFER",
     ],
     linkopts = [
         "-lpthread",
