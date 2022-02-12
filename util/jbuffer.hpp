@@ -108,10 +108,15 @@ class JIOBufferBase: public JBufferBase
 {
 public:
     virtual ~JIOBufferBase() {}
+    /*
+     * WriteTo和ReadFrom对应non-blocked io的时候根据again来确认继续策略
+     * again = true 继续读写操作，类似于将non-blocked io变成blocked io
+     * again = false 从读写操作返回，将后续操作权利交给调用者
+     */
     // 将buffer数据写到相应地方
-    virtual size_t WriteTo(size_t sz) = 0;
+    virtual size_t WriteTo(size_t sz, bool again = true, bool * isAgain = NULL) = 0;
     // 从相应地方读数据到buffer
-    virtual size_t ReadFrom(size_t sz) = 0;
+    virtual size_t ReadFrom(size_t sz, bool again = true, bool * isAgain = NULL) = 0;
 };
 
 /*
@@ -124,8 +129,8 @@ public:
     JGenIOBufferBase(int h = -1);
     ~JGenIOBufferBase();
 
-    size_t WriteTo(size_t sz);
-    size_t ReadFrom(size_t sz);
+    size_t WriteTo(size_t sz, bool again = true, bool * isAgain = NULL);
+    size_t ReadFrom(size_t sz, bool again = true, bool * isAgain = NULL);
     void SetHandle(int h);
 protected:
     int handle;
@@ -147,8 +152,8 @@ public:
     ~JNetBuffer();
 
     // 重载
-    size_t WriteTo(size_t sz);
-    size_t ReadFrom(size_t sz);
+    size_t WriteTo(size_t sz, bool again = true, bool * isAgain = NULL);
+    size_t ReadFrom(size_t sz, bool again = true, bool * isAgain = NULL);
 };
 
 };

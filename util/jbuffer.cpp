@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <asm-generic/errno-base.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -286,7 +287,7 @@ JGenIOBufferBase::JGenIOBufferBase(int h): handle(h)
 JGenIOBufferBase::~JGenIOBufferBase()
 {}
 
-size_t JGenIOBufferBase::WriteTo(size_t sz)
+size_t JGenIOBufferBase::WriteTo(size_t sz, bool again, bool * isAgain)
 {
     if (sz < 0)
         throw JIntOptExp(sz);
@@ -297,12 +298,30 @@ size_t JGenIOBufferBase::WriteTo(size_t sz)
         size_t ret = ::write(handle, data + rp, wn - widx);
         if (ret == 0) 
         {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
             break;
         }
-        else if (ret < 0)
+        else if (ret == -1)
         {
+            if (errno == EINTR)
+            {
+                // 遇到中断重启调用
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                // non-blocked 
+                if (again)
+                {
+                    // 类似于blocked io
+                    continue;
+                }
+                else
+                {
+                    if (isAgain != NULL)
+                        *isAgain = true;
+                    break;
+                }
+            }
             return -1;
         }
         rp += ret, widx += ret;
@@ -311,7 +330,7 @@ size_t JGenIOBufferBase::WriteTo(size_t sz)
     return widx;
 }
 
-size_t JGenIOBufferBase::ReadFrom(size_t sz)
+size_t JGenIOBufferBase::ReadFrom(size_t sz, bool again, bool * isAgain)
 {
     if (sz < 0)
         throw JIntOptExp(sz);
@@ -322,12 +341,30 @@ size_t JGenIOBufferBase::ReadFrom(size_t sz)
         int ret = ::read(handle, data + wp, rn - ridx);
         if (ret == 0)
         {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
             break;
         }
-        else if (ret < 0)
+        else if (ret == -1)
         {
+            if (errno == EINTR)
+            {
+                // 遇到中断重启调用
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                // non-blocked 
+                if (again)
+                {
+                    // 类似于blocked io
+                    continue;
+                }
+                else
+                {
+                    if (isAgain != NULL)
+                        *isAgain = true;
+                    break;
+                }
+            }
             return -1;
         }
         wp += ret, ridx += ret;
@@ -349,7 +386,7 @@ JNetBuffer::JNetBuffer(int h): JGenIOBufferBase(h)
 JNetBuffer::~JNetBuffer()
 {}
 
-size_t JNetBuffer::WriteTo(size_t sz)
+size_t JNetBuffer::WriteTo(size_t sz, bool again, bool * isAgain)
 {
     if (sz < 0)
         throw JIntOptExp(sz);
@@ -360,12 +397,30 @@ size_t JNetBuffer::WriteTo(size_t sz)
         size_t ret = ::send(handle, data + rp + widx, wn - widx, 0);
         if (ret == 0)
         {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
             break;
         }
-        else if (ret < 0)
+        else if (ret == -1)
         {
+            if (errno == EINTR)
+            {
+                // 遇到中断重启调用
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                // non-blocked 
+                if (again)
+                {
+                    // 类似于blocked io
+                    continue;
+                }
+                else
+                {
+                    if (isAgain != NULL)
+                        *isAgain = true;
+                    break;
+                }
+            }
             return -1;
         }
         rp += ret, widx += ret;
@@ -374,7 +429,7 @@ size_t JNetBuffer::WriteTo(size_t sz)
     return widx;
 }
 
-size_t JNetBuffer::ReadFrom(size_t sz)
+size_t JNetBuffer::ReadFrom(size_t sz, bool again, bool * isAgain)
 {
     if (sz < 0)
         throw JIntOptExp(sz);
@@ -385,12 +440,30 @@ size_t JNetBuffer::ReadFrom(size_t sz)
         size_t ret = ::recv(handle, data + wp, rn - ridx, 0);
         if (ret == 0)
         {
-            if (errno == EAGAIN || errno == EINTR)
-                continue;
             break;
         }
-        else if (ret < 0)
+        else if (ret == -1)
         {
+            if (errno == EINTR)
+            {
+                // 遇到中断重启调用
+                continue;
+            }
+            else if (errno == EAGAIN)
+            {
+                // non-blocked 
+                if (again)
+                {
+                    // 类似于blocked io
+                    continue;
+                }
+                else
+                {
+                    if (isAgain != NULL)
+                        *isAgain = true;
+                    break;
+                }
+            }
             return -1;
         }
         wp += ret, ridx += ret;

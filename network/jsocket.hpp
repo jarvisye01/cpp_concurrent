@@ -43,6 +43,7 @@ public:
 
 public:
     JNetAddress(const std::string & ip, uint16_t port);
+    JNetAddress();
     ~JNetAddress();
     int GetDomain() const;
     void SetDomain(int dm);
@@ -68,10 +69,11 @@ class JSocket
 {
 public:
     JSocket(int domain, int type, int protocol);
+    JSocket(int fd);
     virtual ~JSocket();
     int GetSockFd() const;
     int ShutDown(int how = SHUT_RDWR);
-    size_t Send(const void * buf, size_t sz);
+    size_t Send(const void * buf, size_t sz, bool sendCache = false);
     size_t Recv(void * buf, size_t sz);
 private:
     jarvis::jutil::JNetBuffer * sendBuf;
@@ -88,6 +90,7 @@ class JClientSocket: public JSocket
 {
 public:
     JClientSocket(int domain, int type, int protocol);
+    JClientSocket(int fd);
     virtual ~JClientSocket();
     int Connect(const JNetAddress & address);
 };

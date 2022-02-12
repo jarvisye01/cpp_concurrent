@@ -2,11 +2,14 @@
 #include <arpa/inet.h>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <netinet/in.h>
+#include <string>
 #include <strings.h>
 #include <sys/socket.h>
 #include <string.h>
 #include "network/jsocket.hpp"
+#include "network/jnetutil.hpp"
 #include "util/jbuffer.hpp"
 
 namespace jarvis
@@ -33,15 +36,11 @@ int JNetAddress::ResolveStrIpV4(const std::string & ip, sockaddr_in * addr)
 JNetAddress::JNetAddress(const std::string & ip, uint16_t port)
 {
     addrType = NET_IPv4;
-    int ret = 0;
-    ret = ResolveStrIpV4(ip, &genAddr.ipv4Addr);
-    if (ret != 0)
-    {
-        bzero(&genAddr.ipv4Addr, sizeof(sockaddr_in));
-        return;
-    }
-    genAddr.ipv4Addr.sin_family = AF_INET;
-    genAddr.ipv4Addr.sin_port = port;
+    jarvis::Resolve(ip.c_str(), std::to_string(port).c_str(), &genAddr.ipv4Addr);
+}
+
+JNetAddress::JNetAddress()
+{
 }
 
 JNetAddress::~JNetAddress()
@@ -58,6 +57,7 @@ void JNetAddress::SetDomain(int dm)
     domain = dm;
     if (domain == AF_INET)
     {
+        // 暂时只考虑ipv4
         type = SOCK_STREAM;
         addrType = NET_IPv4;
     }
@@ -103,9 +103,13 @@ socklen_t JNetAddress::GetAddrLen() const
 }
 
 // ================JSocket===================
-JSocket::JSocket(int domain, int type, int protocol)
+JSocket::JSocket(int domain, int type, int protocol): sendBuf(NULL), recvBuf(NULL)
 {
     sockFd = socket(domain, type, protocol);
+}
+
+JSocket::JSocket(int fd): sockFd(fd), sendBuf(NULL), recvBuf(NULL)
+{
 }
 
 JSocket::~JSocket()
@@ -128,7 +132,7 @@ int JSocket::ShutDown(int how)
     return shutdown(sockFd, how);
 }
 
-size_t JSocket::Send(const void * buf, size_t sz)
+size_t JSocket::Send(const void * buf, size_t sz, bool sendCache)
 {
     if (sockFd <= 0)
         return -1;
@@ -138,7 +142,10 @@ size_t JSocket::Send(const void * buf, size_t sz)
             return -1;
     }
 
-    return sendBuf->Write(buf, sz);
+    int ret = sendBuf->Write(buf, sz);
+    if (sendCache)
+        sendBuf->WriteTo(sendBuf->Size(), true);
+    return ret;
 }
 
 size_t JSocket::Recv(void * buf, size_t sz)
@@ -152,13 +159,17 @@ size_t JSocket::Recv(void * buf, size_t sz)
     }
 
     if (recvBuf->Size() < sz)
-        recvBuf->ReadFrom(sz);
+        recvBuf->ReadFrom(sz, true);
 
     return recvBuf->Read(buf, sz);
 }
 
 // =============JClientSocket===============
 JClientSocket::JClientSocket(int domain, int type, int protocol): JSocket(domain, type, protocol)
+{
+}
+
+JClientSocket::JClientSocket(int fd): JSocket(fd)
 {
 }
 
@@ -174,10 +185,13 @@ int JClientSocket::Connect(const JNetAddress & address)
 // =============JServerSocket===============
 JServerSocket::JServerSocket(int domain, int type, int protocol): JSocket(domain, type, protocol)
 {
+    // set server socket reuse
+    jarvis::SetSocketReuse(sockFd);
 }
 
 JServerSocket::~JServerSocket()
-{}
+{
+}
 
 int JServerSocket::Bind(const JNetAddress & address)
 {
@@ -195,12 +209,14 @@ int JServerSocket::Accept(JNetAddress * clientAddr)
     if (clientAddr == NULL)
     {
         fd = accept(sockFd, NULL, NULL);
+        // jarvis::SetNonBlock(fd);
     }
     else
     {
         clientAddr->SetDomain(AF_INET);
-        socklen_t len;
+        socklen_t len = clientAddr->GetAddrLen();
         fd = accept(sockFd, clientAddr->GetAddress(), &len);
+        // jarvis::SetNonBlock(fd);
     }
 
     return fd;

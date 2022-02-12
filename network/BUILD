@@ -43,6 +43,7 @@ cc_library(
     ],
     deps = [
         "//util:jbuffer",
+        "//network:jnetutil",
     ],
     copts = [
         "-std=c++20",
@@ -117,6 +118,32 @@ cc_binary(
     ],
     deps = [
         "//network:jnetutil",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+)
+
+cc_binary(
+    name = "jsocket_server_test",
+    srcs = [
+        "jsocket_server_test.cpp",
+    ],
+    deps = [
+        "//network:jsocket",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+)
+
+cc_binary(
+    name = "jsocket_client_test",
+    srcs = [
+        "jsocket_client_test.cpp",
+    ],
+    deps = [
+        "//network:jsocket",
     ],
     copts = [
         "-std=c++20",
