@@ -132,7 +132,37 @@ int JSocket::ShutDown(int how)
     return shutdown(sockFd, how);
 }
 
-size_t JSocket::Send(const void * buf, size_t sz, bool sendCache)
+size_t JSocket::GetSendBufSize() const
+{
+    return sendBuf != NULL ? sendBuf->Size() : 0;
+}
+
+size_t JSocket::GetRecvBufSize() const
+{
+    return recvBuf != NULL ? recvBuf->Size() : 0;
+}
+
+size_t JSocket::Write(const void * buf, size_t sz)
+{
+    if (sendBuf == NULL)
+    {
+        if ((sendBuf = new jarvis::jutil::JNetBuffer(sockFd)) == NULL)
+            return -1;
+    }
+    return sendBuf->Write(buf, sz);
+}
+
+size_t JSocket::Read(void * buf, size_t sz)
+{
+    if (recvBuf == NULL)
+    {
+        if ((recvBuf = new jarvis::jutil::JNetBuffer(sockFd)) == NULL)
+            return -1;
+    }
+    return recvBuf->Read(buf, sz);
+}
+
+size_t JSocket::Send(size_t sz, bool again, bool * isAgain)
 {
     if (sockFd <= 0)
         return -1;
@@ -142,13 +172,10 @@ size_t JSocket::Send(const void * buf, size_t sz, bool sendCache)
             return -1;
     }
 
-    int ret = sendBuf->Write(buf, sz);
-    if (sendCache)
-        sendBuf->WriteTo(sendBuf->Size(), true);
-    return ret;
+    return sendBuf->WriteTo(sz, again, isAgain);
 }
 
-size_t JSocket::Recv(void * buf, size_t sz)
+size_t JSocket::Recv(size_t sz, bool again, bool * isAgain)
 {
     if (sockFd <= 0)
         return -1;
@@ -158,10 +185,7 @@ size_t JSocket::Recv(void * buf, size_t sz)
             return -1;
     }
 
-    if (recvBuf->Size() < sz)
-        recvBuf->ReadFrom(sz, true);
-
-    return recvBuf->Read(buf, sz);
+    return recvBuf->ReadFrom(sz, again, isAgain);
 }
 
 // =============JClientSocket===============
@@ -209,14 +233,12 @@ int JServerSocket::Accept(JNetAddress * clientAddr)
     if (clientAddr == NULL)
     {
         fd = accept(sockFd, NULL, NULL);
-        // jarvis::SetNonBlock(fd);
     }
     else
     {
         clientAddr->SetDomain(AF_INET);
         socklen_t len = clientAddr->GetAddrLen();
         fd = accept(sockFd, clientAddr->GetAddress(), &len);
-        // jarvis::SetNonBlock(fd);
     }
 
     return fd;

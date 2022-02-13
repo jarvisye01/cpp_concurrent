@@ -3,6 +3,7 @@
 #include <string.h>
 #include <string>
 #include <sys/socket.h>
+#include "network/jnetutil.hpp"
 #include "network/jsocket.hpp"
 
 int main(int argc, char ** argv)
@@ -15,23 +16,30 @@ int main(int argc, char ** argv)
 
     while (true)
     {
-        // jarvis::jnet::JNetAddress clientAddr;
         int fd = server.Accept(NULL);
         if (fd < 0)
         {
             printf("accept error\n");
             continue;
         }
-        char buf[1024];
+
+        jarvis::SetNonBlock(fd);
         jarvis::jnet::JClientSocket client(fd);
-        size_t sz = 0;
 
         printf("server start\n");
-        sz = client.Recv(static_cast<void*>(buf), 12);
+
+        char buf[1024];
+        size_t sz = 0;
+        // non-block io must receive something
+        while ((sz = client.Recv(1024, false)) == 0)
+        {}
+        client.Read(buf, sz);
         buf[sz] = '\0';
-        printf("server recv(%d): %s\n", strlen(buf), buf);
-        sz = client.Send(static_cast<const void*>(buf), strlen(buf), true);
-        printf("server send(%d): %s\n", strlen(buf), buf);
+        printf("server recv(%d): %s\n", sz, buf);
+
+        client.Write(buf, sz);
+        sz = client.Send(sz, true);
+        printf("server send(%d): %s\n", sz, buf);
         client.ShutDown();
     }
 

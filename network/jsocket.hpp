@@ -73,8 +73,19 @@ public:
     virtual ~JSocket();
     int GetSockFd() const;
     int ShutDown(int how = SHUT_RDWR);
-    size_t Send(const void * buf, size_t sz, bool sendCache = false);
-    size_t Recv(void * buf, size_t sz);
+
+    size_t GetSendBufSize() const;
+    size_t GetRecvBufSize() const;
+
+    /*
+     * Write和Read都是操作jsocket的缓存
+     * Send和Recv则是真的从socket中读写数据
+     */
+    size_t Write(const void * buf, size_t sz);
+    size_t Read(void * buf, size_t sz);
+
+    size_t Send(size_t sz, bool again = false, bool * isAgain = NULL);
+    size_t Recv(size_t sz, bool again = false, bool * isAgain = NULL);
 private:
     jarvis::jutil::JNetBuffer * sendBuf;
     jarvis::jutil::JNetBuffer * recvBuf;
