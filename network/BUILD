@@ -52,6 +52,23 @@ cc_library(
 )
 
 cc_library(
+    name = "jpoller",
+    srcs = [
+        "jpoller.cpp",
+    ],
+    hdrs = [
+        "jpoller.hpp",
+    ],
+    deps = [
+        "//util:jtime",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "jeventloop",
     srcs = [
         "jeventloop.cpp",
