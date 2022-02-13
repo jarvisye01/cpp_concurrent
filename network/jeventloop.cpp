@@ -1,9 +1,12 @@
+#include <cstddef>
 #include <unistd.h>
 #include <string>
 #include <assert.h>
 #include <sys/epoll.h>
 #include <string.h>
 #include "network/jeventloop.hpp"
+#include "network/jpoller.hpp"
+#include "network/jsocket.hpp"
 #include "util/jlog.hpp"
 #include "util/jtime.hpp"
 
@@ -264,6 +267,104 @@ int JEventLoop::TimeFunc()
         lastTC = GetMillTime();
     }
     return 0;
+}
+
+namespace jnet
+{
+
+#define SOCK_ERR(fd, client, poller) \
+    do \
+    {\
+        client->ShutDown();\
+        poller->DelEvent(fd, jarvis::jnet::JEventState::ALL_EVENTS);\
+    }\
+    while (0);
+
+// ================JEventLoop================
+JEventLoop::JEventLoop()
+{}
+
+JEventLoop::~JEventLoop()
+{}
+
+int JEventLoop::Loop()
+{
+    while (true)
+    {
+        // process time event
+        int num = poller->Poll(200);
+        for (int i = 0; i < num; i++)
+        {
+            epoll_event * ev = poller->GetEvent(i);
+            if (ev == NULL)
+                continue;
+
+            jarvis::jnet::JClientSocket * client = static_cast<jarvis::jnet::JClientSocket*>(ev->data.ptr);
+            if (client == NULL)
+                continue;
+            int fd = client->GetSockFd();
+
+            if (ev->events & EPOLLIN)
+            {
+                int ret = dataHandler->HandleIn(client); 
+                if (ret < 0)
+                {
+                    // read data from socket error
+                    SOCK_ERR(fd, client, poller);
+                    continue;
+                }
+                ret = dataHandler->CheckData(client);
+                if (ret == 0)
+                {
+                    ret = eventCallBack(client, this);
+                    if (ret == 0)
+                    {
+                        poller->AddEvent(fd, EPOLLOUT);
+                    }
+                    else
+                    {
+                        SOCK_ERR(fd, client, poller);
+                    }
+                }
+                else if (ret == 1)
+                {
+                    // 数据包不完整，进一步接收试试
+                    poller->AddEvent(fd, EPOLLIN);
+                }
+                else
+                {
+                    SOCK_ERR(fd, client, poller);
+                }
+            }
+            else if (ev->events & EPOLLOUT)
+            {
+                int ret = dataHandler->HandleOut(client);
+                if (ret == 0)
+                {
+                    poller->DelEvent(fd, EPOLLOUT);
+                }
+                else
+                {
+                    SOCK_ERR(fd, client, poller);
+                }
+            }
+            else if (ev->events & EPOLLERR)
+            {
+                SOCK_ERR(fd, client, poller);
+            }
+            else
+            {
+                SOCK_ERR(fd, client, poller);
+            }
+        }
+    }
+}
+
+void JEventLoop::SetPoller(jarvis::jnet::JPoller * p)
+{
+    poller = p;
+}
+
 }
 
 }  // namespace jarvis

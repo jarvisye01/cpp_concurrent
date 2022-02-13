@@ -78,6 +78,8 @@ cc_library(
     ],
     deps = [
         "//network:jconn",
+        "//network:jpoller",
+        "//network:jsocket",
         "//util:jlog",
     ],
     copts = [

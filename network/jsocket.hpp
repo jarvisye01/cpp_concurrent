@@ -121,6 +121,18 @@ public:
     int Accept(JNetAddress * clientAddr);
 };
 
+/*
+ * DataHandler用于检查数据包的完整性
+ * 1.CheckData
+ */
+class JDataHandler
+{
+public:
+    virtual int HandleIn(jarvis::jnet::JClientSocket * socket) = 0;
+    virtual int HandleOut(jarvis::jnet::JClientSocket * socket) = 0;
+    virtual int CheckData(jarvis::jnet::JClientSocket * socket) = 0;
+};
+
 }   // namespace jnet
 
 }   // namespace jarvis

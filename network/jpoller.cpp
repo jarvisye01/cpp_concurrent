@@ -6,15 +6,30 @@
 namespace jarvis
 {
 
+namespace jnet
+{
+
 // ============JEventState=============
-JEventState::JEventState(int f, uint32_t e, uint64_t l): fd(f), events(e), lastTrigger(l)
+JEventState::JEventState(int f, uint32_t e, uint64_t l, void * p): fd(f), events(e), lastTrigger(l), ptr(p)
 {}
+
+uint32_t JEventState::NON_EVENTS = 0;
+uint32_t JEventState::ALL_EVENTS = 0xffffffff;
 
 // =============JEpoller==============
 JEpoller::JEpoller(int max): maxFd(max), epollFd(-1)
 {
     states.reserve(maxFd);
     epollEvents.reserve(maxFd);
+}
+
+JEpoller::~JEpoller()
+{
+    for (int i = 0; i < states.size(); i++)
+    {
+        if (states[i] != NULL)
+            delete states[i];
+    }
 }
 
 int JEpoller::Create()
@@ -89,5 +104,7 @@ epoll_event* JEpoller::GetEvent(int idx)
         return NULL;
     return &epollEvents[idx];
 }
+
+}   // namespace jnet
 
 }   // namespace jarvis

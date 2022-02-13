@@ -1,9 +1,12 @@
 #ifndef J_EVENTLOOP_H
 #define J_EVENTLOOP_H
 
+#include <pthread.h>
 #include <sys/epoll.h>
 #include <inttypes.h>
 #include "network/jconn.hpp"
+#include "network/jpoller.hpp"
+#include "network/jsocket.hpp"
 
 namespace jarvis
 {
@@ -72,6 +75,36 @@ private:
     uint64_t tcInterval;
     TimeCallBack timeCallBack;
 };
+
+namespace jnet
+{
+
+/*
+ * EventLoop实现了一个事件循环
+ * 1.Loop
+ * 2.SetPoller
+ */
+class JEventLoop
+{
+public:
+    typedef int (*EventCallBack)(JClientSocket*, JEventLoop*);
+    typedef int (*TimeCallBack)(JEventLoop*);
+
+    JEventLoop();
+    JEventLoop(const JEventLoop&) = delete;
+    JEventLoop& operator=(const JEventLoop&) = delete;
+    ~JEventLoop();
+
+    int Loop();
+    void SetPoller(jarvis::jnet::JPoller * p);
+private:
+    jarvis::jnet::JPoller *poller;
+    jarvis::jnet::JDataHandler *dataHandler;
+    EventCallBack eventCallBack;
+    TimeCallBack timeCallBack;
+};
+
+}   // namespace jnet
 
 }  // namespace jarvis
 
