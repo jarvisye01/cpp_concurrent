@@ -10,6 +10,7 @@
 #include "util/jstring.hpp"
 #include "util/jconfig.hpp"
 #include "util/jref.hpp"
+#include "util/jdebug.hpp"
 #include "concurrent/jthread.hpp"
 #include "file/jfile.hpp"
 
@@ -103,6 +104,8 @@ int TestJConfig()
 
 int TestJRef()
 {
+    using namespace jarvis::jdebug;
+    Pause(3000);
     jarvis::JUseCount r1;
     auto r2 = r1;
     r1.AddRef();
@@ -116,6 +119,7 @@ int TestJRef()
     }
     r1 = r1;
     printf("r1 ref count: %d\n", r1.RefCount());
+    Printf("%s", "hello");
 }
 
 int TestNewBuffer()

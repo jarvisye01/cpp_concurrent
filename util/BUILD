@@ -122,6 +122,23 @@ cc_library(
     visibility = ["//visibility:public"],
 )
 
+cc_library(
+    name = "jdebug",
+    srcs = [
+        "jdebug.cpp",
+    ],
+    hdrs = [
+        "jdebug.hpp",
+    ],
+    deps = [
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "jutil_test",
     srcs = [
@@ -137,12 +154,13 @@ cc_binary(
         "//util:jstring",
         "//util:jconfig",
         "//util:jref",
+        "//util:jdebug",
     ],
     copts = [
         "-std=c++20",
         # "-DJCONFIG",
-        # "-DJREF",
-        "-DJNEWBUFFER",
+         "-DJREF",
+        # "-DJNEWBUFFER",
     ],
     linkopts = [
         "-lpthread",
