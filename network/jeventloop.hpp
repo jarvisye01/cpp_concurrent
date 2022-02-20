@@ -97,6 +97,8 @@ public:
 
     int Loop();
     void SetPoller(jarvis::jnet::JPoller * p);
+    void SetEventCallBack(EventCallBack callback);
+    jarvis::jnet::JPoller* GetPoller();
 private:
     jarvis::jnet::JPoller *poller;
     jarvis::jnet::JDataHandler *dataHandler;

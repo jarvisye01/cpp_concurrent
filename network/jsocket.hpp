@@ -73,6 +73,7 @@ public:
     virtual ~JSocket();
     int GetSockFd() const;
     int ShutDown(int how = SHUT_RDWR);
+    int Close();
 
     size_t GetSendBufSize() const;
     size_t GetRecvBufSize() const;
@@ -83,6 +84,7 @@ public:
      */
     size_t Write(const void * buf, size_t sz);
     size_t Read(void * buf, size_t sz);
+    size_t Pick(void * buf, size_t sz);
 
     size_t Send(size_t sz, bool again = false, bool * isAgain = NULL);
     size_t Recv(size_t sz, bool again = false, bool * isAgain = NULL);
@@ -131,6 +133,19 @@ public:
     virtual int HandleIn(jarvis::jnet::JClientSocket * socket) = 0;
     virtual int HandleOut(jarvis::jnet::JClientSocket * socket) = 0;
     virtual int CheckData(jarvis::jnet::JClientSocket * socket) = 0;
+};
+
+/*
+ * EasyDataHandler一个简单的lv协议检测
+ * Protocol: MagicNum(3) + Len(4) + Data(Len)
+ */
+class JEasyDataHandler: public JDataHandler
+{
+public:
+    virtual int HandleIn(jarvis::jnet::JClientSocket * socket);
+    virtual int HandleOut(jarvis::jnet::JClientSocket * socket);
+    virtual int CheckData(jarvis::jnet::JClientSocket * socket);
+
 };
 
 }   // namespace jnet

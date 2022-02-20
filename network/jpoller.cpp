@@ -1,4 +1,7 @@
 #include <cstdint>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <sys/epoll.h>
 #include "network/jpoller.hpp"
 #include "util/jtime.hpp"
@@ -8,6 +11,8 @@ namespace jarvis
 
 namespace jnet
 {
+
+class JClientScoket;
 
 // ============JEventState=============
 JEventState::JEventState(int f, uint32_t e, uint64_t l, void * p): fd(f), events(e), lastTrigger(l), ptr(p)
@@ -20,7 +25,7 @@ uint32_t JEventState::ALL_EVENTS = 0xffffffff;
 JEpoller::JEpoller(int max): maxFd(max), epollFd(-1)
 {
     states.reserve(maxFd);
-    epollEvents.reserve(maxFd);
+    epollEvents = new epoll_event[maxFd];
 }
 
 JEpoller::~JEpoller()
@@ -30,6 +35,8 @@ JEpoller::~JEpoller()
         if (states[i] != NULL)
             delete states[i];
     }
+    if (epollEvents != NULL)
+        delete [] epollEvents;
 }
 
 int JEpoller::Create()
@@ -42,10 +49,10 @@ int JEpoller::Poll(int waitTime)
 {
     if (epollFd == -1)
         return -1;
-    return epoll_wait(epollFd, &epollEvents[0], epollEvents.size(), waitTime);
+    return epoll_wait(epollFd, epollEvents, maxFd, waitTime);
 }
 
-int JEpoller::AddEvent(int fd, uint32_t events) 
+int JEpoller::AddEvent(int fd, uint32_t events, void * ptr) 
 {
     if (fd >= maxFd)
         return -1;
@@ -55,7 +62,10 @@ int JEpoller::AddEvent(int fd, uint32_t events)
     {
         // add new event
         states[fd] = new JEventState(fd, events, jarvis::GetMillTime());
-        // e.data.ptr = 
+        states[fd]->events = events;
+        states[fd]->ptr = ptr;
+        if (ptr != NULL)
+            e.data.ptr = ptr;
         e.events = events;
         return epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &e);
     }
@@ -64,6 +74,7 @@ int JEpoller::AddEvent(int fd, uint32_t events)
         // mod an event
         states[fd]->events |= events;
         e.events = states[fd]->events;
+        e.data.ptr = states[fd]->ptr;
         return epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &e);
     }
     return -1;
@@ -83,15 +94,19 @@ int JEpoller::DelEvent(int fd, uint32_t events)
     {
         e.events = states[fd]->events & (~events);
         states[fd]->events = e.events;
-        if (e.events)
+        if (e.events != 0)
         {
             // mod an event
+            if (states[fd]->ptr != NULL)
+                e.data.ptr = states[fd]->ptr;
             return epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &e);
         }
         else
         {
             // del an event
-            delete states[fd];
+            if (states[fd]->ptr != NULL)
+                delete static_cast<jarvis::jnet::JClientScoket*>(states[fd]->ptr);
+            delete states[fd], states[fd] = NULL;
             return epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &e);
         }
     }

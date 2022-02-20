@@ -61,6 +61,26 @@ cc_library(
 )
 
 cc_library(
+    name = "jsyncmap",
+    srcs = [
+        "jmap.cpp",
+    ],
+    hdrs = [
+        "jmap.hpp",
+    ],
+    deps = [
+        "//concurrent:jmutex",
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [
+        "-lpthread",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "jtask",
     srcs = [
         "jtask.cpp",

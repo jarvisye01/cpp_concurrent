@@ -18,6 +18,25 @@ cc_library(
 )
 
 cc_library(
+    name = "jparser",
+    srcs = [
+        "jparser.cpp",
+    ],
+    hdrs = [
+        "jparser.hpp",
+    ],
+    deps = [
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [
+        "-lpthread",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "jnetutil",
     srcs = [
         "jnetutil.cpp",

@@ -8,6 +8,7 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <unistd.h>
 #include "network/jsocket.hpp"
 #include "network/jnetutil.hpp"
 #include "util/jbuffer.hpp"
@@ -127,9 +128,15 @@ int JSocket::GetSockFd() const
 
 int JSocket::ShutDown(int how)
 {
-    if (sockFd <= 0)
+    if (sockFd < 0)
         return 0;
     return shutdown(sockFd, how);
+}
+
+int JSocket::Close()
+{
+    if (sockFd < 0)
+    return close(sockFd);
 }
 
 size_t JSocket::GetSendBufSize() const
@@ -160,6 +167,11 @@ size_t JSocket::Read(void * buf, size_t sz)
             return -1;
     }
     return recvBuf->Read(buf, sz);
+}
+
+size_t JSocket::Pick(void * buf, size_t sz)
+{
+    return recvBuf->Pick(buf, sz);
 }
 
 size_t JSocket::Send(size_t sz, bool again, bool * isAgain)
@@ -242,6 +254,86 @@ int JServerSocket::Accept(JNetAddress * clientAddr)
     }
 
     return fd;
+}
+
+// =============JEasyDataHandler===============
+int JEasyDataHandler::HandleIn(jarvis::jnet::JClientSocket * socket)
+{
+    int recvSize = 1024, total = 0;
+    while (true)
+    {
+        bool isAgain = false;
+        int rz = socket->Recv(recvSize, false, &isAgain);
+
+        if (rz == 0)
+        {
+            // client close socket
+            break;
+        }
+        else if (rz < 0)
+        {
+            // error
+            return -1;
+        }
+        else
+        {
+            // receive some data
+            if (isAgain)
+            {
+                // non-blocked io
+                break;
+            }
+            else
+            {
+                recvSize *= 2;
+                total += rz;
+                if (total >= 1024 * 1024)
+                {
+                    // data length is too long
+                    return -1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+int JEasyDataHandler::HandleOut(jarvis::jnet::JClientSocket * socket)
+{
+    int ret = socket->Send(socket->GetSendBufSize(), true);
+    return ret < 0 ? -1 : 0;
+}
+
+int JEasyDataHandler::CheckData(jarvis::jnet::JClientSocket * socket)
+{
+    if (socket->GetRecvBufSize() < 7)
+    {
+        // need to receive data
+        return 1;
+    }
+    else
+    {
+        // pick front 7 bytes
+        char buf[7];
+        int pz = socket->Pick(buf, 7);
+        if (pz < 7)
+            return -1;
+
+        // check magic num
+        if (!(buf[0] == 'y' && buf[1] == 'x' && buf[2] == 'j'))
+            return -1;
+
+        // get length
+        uint32_t netLen = 0, hostLen = 0;
+        memcpy(static_cast<void*>(&netLen), static_cast<void*>(buf + 3), 4);
+        hostLen = ntohl(netLen);
+
+        if (hostLen + 7 == socket->GetRecvBufSize())
+            return 0;
+        else
+            return -1;
+    }
+    return 0;
 }
 
 }   // namespace jet

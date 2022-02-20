@@ -84,6 +84,7 @@ public:
     size_t Write(const void * buf, size_t sz);
     size_t Write(const std::string & str);
     size_t Read(void * buf, size_t sz);
+    size_t Pick(void * buf, size_t sz) const;
     void Reset();
     size_t Size() const;
     size_t Capacity() const;

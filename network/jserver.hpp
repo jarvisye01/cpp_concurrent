@@ -4,8 +4,10 @@
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <vector>
 #include "network/jeventloop.hpp"
 #include "concurrent/jthread.hpp"
+#include "network/jsocket.hpp"
 
 namespace jarvis
 {
@@ -51,6 +53,30 @@ private:
     uint64_t tcInterval;
     JEventLoop::TimeCallBack tc;
 };
+
+namespace jnet
+{
+
+class JEasyTcpServer
+{
+public:
+    JEasyTcpServer(const std::string h, uint16_t p);
+    ~JEasyTcpServer();
+    JEasyTcpServer(const JEasyTcpServer&) = delete;
+    JEasyTcpServer& operator=(const JEasyTcpServer&) = delete;
+
+    int Init();
+    int Run();
+    int AddLooper(jarvis::jnet::JEventLoop * looper);
+private:
+    std::string host;
+    uint16_t port;
+    int workerSize;
+    jarvis::jnet::JServerSocket *svrSocket;
+    std::vector<jarvis::jnet::JEventLoop*> loopers;
+};
+
+}   // namespace jnet
 
 }  // namespace jarvis
 

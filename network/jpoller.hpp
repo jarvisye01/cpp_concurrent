@@ -45,7 +45,7 @@ public:
     virtual int Create() = 0;
     // 多路复用io等待事件发生
     virtual int Poll(int waitTime) = 0;
-    virtual int AddEvent(int fd, uint32_t events) = 0;
+    virtual int AddEvent(int fd, uint32_t events, void * ptr = NULL) = 0;
     virtual int DelEvent(int fd, uint32_t events) = 0;
     virtual epoll_event* GetEvent(int idx) = 0;
 };
@@ -56,19 +56,19 @@ public:
 class JEpoller: public JPoller
 {
 public:
-    JEpoller(int max);
+    JEpoller(int max = 1024);
     virtual ~JEpoller();
 
     virtual int Create();
     virtual int Poll(int waitTime);
-    virtual int AddEvent(int fd, uint32_t events);
+    virtual int AddEvent(int fd, uint32_t events, void * ptr = NULL);
     virtual int DelEvent(int fd, uint32_t events);
     virtual epoll_event* GetEvent(int idx);
 private:
     int maxFd;
     int epollFd;
     std::vector<JEventState*> states;
-    std::vector<epoll_event> epollEvents;
+    epoll_event *epollEvents;
 };
 
 }   // namespace jnet

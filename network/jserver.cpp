@@ -2,9 +2,18 @@
 #include <functional>
 #include <error.h>
 #include <string.h>
+#include <string>
+#include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <vector>
+#include "concurrent/jthread.hpp"
+#include "network/jeventloop.hpp"
+#include "network/jpoller.hpp"
 #include "network/jserver.hpp"
 #include "network/jnetutil.hpp"
 #include "network/jnetutil.hpp"
+#include "network/jsocket.hpp"
 #include "util/jrand.hpp"
 #include "util/jlog.hpp"
 
@@ -195,5 +204,74 @@ int JTcpServer::Run()
     state = STOP;
     return 0;
 }
+
+namespace jnet
+{
+
+// ==============JEasyTcpServer================
+JEasyTcpServer::JEasyTcpServer(const std::string h, uint16_t p): host(h), port(p), workerSize(0), svrSocket(NULL)
+{
+}
+
+JEasyTcpServer::~JEasyTcpServer()
+{
+    if (svrSocket != NULL)
+        delete svrSocket;
+}
+
+int JEasyTcpServer::Init()
+{
+    int ret = -1;
+    svrSocket = new jarvis::jnet::JServerSocket(AF_INET, SOCK_STREAM, 0);
+    if (svrSocket == NULL)
+        return -1;
+    ret = svrSocket->Bind(jarvis::jnet::JNetAddress(host, port));
+    if (ret != 0)
+        return -1;
+    ret = svrSocket->Listen();
+    if (ret != 0)
+        return -1;
+    return 0;
+}
+
+int JEasyTcpServer::AddLooper(jarvis::jnet::JEventLoop * looper)
+{
+    workerSize++;
+    loopers.push_back(looper);
+    return workerSize;
+}
+
+int JEasyTcpServer::Run()
+{
+    // start eventloop
+    std::vector<jarvis::JThread> workers;
+    workers.resize(workerSize);
+    for (int i = 0; i < workerSize; i++)
+    {
+        workers[i].SetThreadFunc([&, i] () {
+            loopers[i]->Loop();
+        });
+        workers[i].Start();
+        workers[i].Detach();
+    }
+
+    if (svrSocket == NULL)
+        return -1;
+
+    while (true)
+    {
+        int fd = svrSocket->Accept(NULL);
+        jarvis::SetNonBlock(fd);
+        jarvis::jnet::JClientSocket * socketPtr = new jarvis::jnet::JClientSocket(fd);
+        int idx = jarvis::jrand::RandN(workerSize);
+        if (idx >= 0 && idx < loopers.size() && loopers[idx] != NULL)
+        {
+            loopers[idx]->GetPoller()->AddEvent(fd, EPOLLIN | EPOLLERR | EPOLLHUP, static_cast<void*>(socketPtr)); 
+        }
+    }
+    return 0;
+}
+
+}   // namespace jnet
 
 }  // jarvis

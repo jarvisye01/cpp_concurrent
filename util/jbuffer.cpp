@@ -225,6 +225,13 @@ size_t JBufferBase::Read(void * buf, size_t sz)
     return rn;
 }
 
+size_t JBufferBase::Pick(void * buf, size_t sz) const
+{
+    int pz = std::min(sz, Size());
+    memcpy(buf, data + rp, pz);
+    return pz;
+}
+
 void JBufferBase::Reset()
 {
     rp = wp = 0;
@@ -270,7 +277,7 @@ void JBufferBase::Expand(size_t n)
     size_t len = 0;
     if (data != NULL)
     {
-        size_t len = std::min(n, wp - rp);
+        len = std::min(n, wp - rp);
         memcpy(tmp, data + rp, len);
         delete [] data;
     }

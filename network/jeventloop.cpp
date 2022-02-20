@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdlib>
 #include <unistd.h>
 #include <string>
 #include <assert.h>
@@ -138,7 +139,6 @@ void JEpoller::ClearNonActive()
             continue;
         if (now - states[i].lastTriger > 3 * 60 * 1000)
         {
-            printf("now: %d, ladt %d\n", now, states[i].lastTriger);
             // delete fd from epfd
             close(states[i].fd);
             states[i].Clear();
@@ -281,7 +281,7 @@ namespace jnet
     while (0);
 
 // ================JEventLoop================
-JEventLoop::JEventLoop()
+JEventLoop::JEventLoop(): dataHandler(new jarvis::jnet::JEasyDataHandler)
 {}
 
 JEventLoop::~JEventLoop()
@@ -292,16 +292,17 @@ int JEventLoop::Loop()
     while (true)
     {
         // process time event
-        int num = poller->Poll(200);
+        int num = poller->Poll(5000);
         for (int i = 0; i < num; i++)
         {
             epoll_event * ev = poller->GetEvent(i);
             if (ev == NULL)
                 continue;
 
-            jarvis::jnet::JClientSocket * client = static_cast<jarvis::jnet::JClientSocket*>(ev->data.ptr);
-            if (client == NULL)
+            if (ev->data.ptr == NULL)
                 continue;
+
+            jarvis::jnet::JClientSocket * client = static_cast<jarvis::jnet::JClientSocket*>(ev->data.ptr);
             int fd = client->GetSockFd();
 
             if (ev->events & EPOLLIN)
@@ -341,7 +342,7 @@ int JEventLoop::Loop()
                 int ret = dataHandler->HandleOut(client);
                 if (ret == 0)
                 {
-                    poller->DelEvent(fd, EPOLLOUT);
+                    SOCK_ERR(fd, client, poller);
                 }
                 else
                 {
@@ -363,6 +364,16 @@ int JEventLoop::Loop()
 void JEventLoop::SetPoller(jarvis::jnet::JPoller * p)
 {
     poller = p;
+}
+
+void JEventLoop::SetEventCallBack(EventCallBack callback)
+{
+    eventCallBack = callback;
+}
+
+jarvis::jnet::JPoller* JEventLoop::GetPoller()
+{
+    return poller;
 }
 
 }
