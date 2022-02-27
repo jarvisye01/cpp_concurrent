@@ -1,6 +1,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <endian.h>
 #include <netinet/in.h>
 #include <string>
 #include <string.h>
@@ -105,6 +106,119 @@ char* JBaseTLV::GetData()
 const char* JBaseTLV::GetData() const
 {
     return data;
+}
+
+// =============JUint8==============
+uint8_t JUint8TLV::GetVal() const
+{
+    if (type != TYPE_UINT8)
+        return -1;
+    uint8_t tmp = *((uint8_t*)(data));
+    return tmp;
+}
+
+// ============JUint16==============
+uint16_t JUint16TLV::GetVal() const
+{
+    if (type != TYPE_UINT16)
+        return -1;
+    uint16_t tmp = *((uint16_t*)(data));
+    return ntohs(tmp);
+}
+
+// ============JUint32==============
+uint32_t JUint32TLV::GetVal() const
+{
+    if (type != TYPE_UINT32)
+        return -1;
+    uint32_t tmp = *((uint32_t*)(data));
+    return ntohl(tmp);
+}
+
+// ============JUint64=============
+uint64_t JUint64TLV::GetVal() const
+{
+    if (type != TYPE_UINT64)
+        return -1;
+
+    uint64_t tmp = *((uint64_t*)(data));
+    // 主机也是big_endian，直接返回
+    if (__BYTE_ORDER == __BIG_ENDIAN)
+        return tmp;
+    
+    // 主机是little_endian
+    uint64_t high = ntohl((tmp << 32) >> 32) << 32;
+    uint64_t low = ntohl(tmp >> 32);
+    return high | low;
+}
+
+// ============JInt8=============
+int8_t JInt8TLV::GetVal() const
+{
+    if (type != TYPE_INT8)
+        return -1;
+    int8_t tmp = *((int8_t*)(data));
+    return tmp;
+}
+
+// ============JInt16=============
+int16_t JInt16TLV::GetVal() const
+{
+    if (type != TYPE_INT16)
+        return -1;
+    uint16_t tmp = *((uint16_t*)(data));
+    return static_cast<int16_t>(ntohs(tmp));
+}
+
+// ============JInt32=============
+int32_t JInt32TLV::GetVal() const
+{
+    if (type != TYPE_INT32)
+        return -1;
+    uint32_t tmp = *((uint32_t*)(data));
+    return static_cast<int32_t>(ntohl(tmp));
+}
+
+// ============JInt64=============
+int64_t JInt64TLV::GetVal() const
+{
+    if (type != TYPE_INT64)
+        return -1;
+
+    uint64_t tmp = *((uint64_t*)(data));
+    if (__BYTE_ORDER == __BIG_ENDIAN)
+        return static_cast<int64_t>(tmp);
+
+    uint64_t high = ntohl((tmp << 32) >> 32) << 32;
+    uint64_t low = ntohl(tmp >> 32);
+    return static_cast<int64_t>(high | low);
+}
+
+// =============JDoubleTLV===============
+double JDoubleTLV::GetVal() const
+{
+    if (type != TYPE_DOUBLE)
+        return -1;
+
+    uint64_t tmp = *((uint64_t*)(data));
+    if (__BYTE_ORDER == __LITTLE_ENDIAN)
+    {
+        uint64_t high = ntohl((tmp << 32) >> 32) << 32;
+        uint64_t low = ntohl(tmp >> 32);
+        tmp = high | low;
+    }
+
+    double ret;
+    memcpy(&ret, &tmp, sizeof(double));
+    return ret;
+}
+
+// ================JStringTLV================
+std::string JStringTLV::GetVal() const
+{
+    if (type != TYPE_STRING)
+        return std::string("");
+    return std::string(data, length);
 }
 
 }   // namespace jarvis
