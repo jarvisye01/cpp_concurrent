@@ -81,6 +81,24 @@ cc_library(
 )
 
 cc_library(
+    name = "jatomic",
+    srcs = [
+        "jatomic.cpp",
+    ],
+    hdrs = [
+        "jatomic.hpp",
+    ],
+    deps = [
+    ],
+    copts = [
+        "-std=c++20",
+    ],
+    linkopts = [
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "jtask",
     srcs = [
         "jtask.cpp",
