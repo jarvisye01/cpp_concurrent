@@ -17,6 +17,10 @@ const uint16_t TYPE_INT64 = 0x07;
 const uint16_t TYPE_DOUBLE = 0x08;
 const uint16_t TYPE_STRING = 0X09;
 
+// util functions
+uint64_t ntohll(uint64_t num);
+uint64_t htonll(uint64_t num);
+
 /*
  * Serializable序列化的接口
  * 1.Serialize
@@ -51,6 +55,7 @@ protected:
     uint16_t type;
     uint32_t length;
     char * data;
+    void Init(uint16_t t, uint32_t l, const char * b);
 };
 
 /*
@@ -59,6 +64,7 @@ protected:
 class JUint8TLV: public JBaseTLV
 {
 public:
+    JUint8TLV(const uint8_t num);
     uint8_t GetVal() const;
 };
 
@@ -68,6 +74,7 @@ public:
 class JUint16TLV: public JBaseTLV
 {
 public:
+    JUint16TLV(const uint16_t num);
     uint16_t GetVal() const;
 };
 
@@ -77,6 +84,7 @@ public:
 class JUint32TLV: public JBaseTLV
 {
 public:
+    JUint32TLV(const uint32_t num);
     uint32_t GetVal() const;
 };
 
@@ -86,6 +94,7 @@ public:
 class JUint64TLV: public JBaseTLV
 {
 public:
+    JUint64TLV(const uint64_t num);
     uint64_t GetVal() const;
 };
 
@@ -95,6 +104,7 @@ public:
 class JInt8TLV: public JBaseTLV
 {
 public:
+    JInt8TLV(const int8_t num);
     int8_t GetVal() const;
 };
 
@@ -104,6 +114,7 @@ public:
 class JInt16TLV: public JBaseTLV
 {
 public:
+    JInt16TLV(const int16_t num);
     int16_t GetVal() const;
 };
 
@@ -113,6 +124,7 @@ public:
 class JInt32TLV: public JBaseTLV
 {
 public:
+    JInt32TLV(const int32_t num);
     int32_t GetVal() const;
 };
 
@@ -122,6 +134,7 @@ public:
 class JInt64TLV: public JBaseTLV
 {
 public:
+    JInt64TLV(const int64_t num);
     int64_t GetVal() const;
 };
 
@@ -131,6 +144,7 @@ public:
 class JDoubleTLV: public JBaseTLV
 {
 public:
+    JDoubleTLV(const double num);
     double GetVal() const;
 };
 
@@ -140,6 +154,7 @@ public:
 class JStringTLV: public JBaseTLV
 {
 public:
+    JStringTLV(const std::string & str);
     std::string GetVal() const;
 };
 

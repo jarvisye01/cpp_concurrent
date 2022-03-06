@@ -187,3 +187,17 @@ cc_binary(
         "-std=c++20",
     ],
 )
+
+cc_binary(
+    name = "jparser_test",
+    srcs = [
+        "jparser_test.cpp",
+    ],
+    deps = [
+        "//network:jparser",
+    ],
+    copts = [
+        "-std=c++20",
+        # "-g",
+    ],
+)
